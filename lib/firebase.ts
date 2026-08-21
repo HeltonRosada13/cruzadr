@@ -25,8 +25,10 @@ try {
     app = getApp();
   }
 
-  const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId || 'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
-  db = getFirestore(app, firestoreDatabaseId);
+  const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+    ? firebaseConfig.firestoreDatabaseId 
+    : undefined;
+  db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
   auth = getAuth(app);
   // Set Firestore log level to silent/error to avoid noisy backoff warnings in console
   try {
@@ -35,8 +37,10 @@ try {
 } catch (error) {
   console.warn('Firebase initialization notice:', error);
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId || 'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
-  db = getFirestore(app, firestoreDatabaseId);
+  const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+    ? firebaseConfig.firestoreDatabaseId 
+    : undefined;
+  db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
   auth = getAuth(app);
 }
 

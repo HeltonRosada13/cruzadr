@@ -7,9 +7,7 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const FIRESTORE_DATABASE_ID =
-  firebaseConfig.firestoreDatabaseId ||
-  'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
+const FIRESTORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId || '(default)';
 const FIRESTORE_DOC_PATH = 'church_data';
 const FIRESTORE_DOC_ID = 'main';
 
@@ -142,7 +140,7 @@ export async function GET() {
             ? currentState.editTimestamp
             : 0;
 
-          // If remote is newer or equals, merge and cache
+          // If remote has valid data and is newer or equal, merge and cache
           if (remoteTs >= serverTs) {
             const merged = {
               ...initialChurchData,
@@ -150,10 +148,16 @@ export async function GET() {
               ...parsed,
             };
             saveServerStateToFile(merged);
-            return NextResponse.json({
-              success: true,
-              data: merged,
-            });
+            return NextResponse.json(
+              { success: true, data: merged },
+              {
+                headers: {
+                  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+                  Pragma: 'no-cache',
+                  Expires: '0',
+                },
+              }
+            );
           }
         }
       }
@@ -163,10 +167,19 @@ export async function GET() {
   }
 
   // Return server stored state (which holds the user's latest edits across sessions/browsers)
-  return NextResponse.json({
-    success: true,
-    data: currentState || initialChurchData,
-  });
+  return NextResponse.json(
+    {
+      success: true,
+      data: currentState || initialChurchData,
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    }
+  );
 }
 
 export async function POST(req: Request) {
@@ -205,7 +218,14 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, data: merged });
+    return NextResponse.json(
+      { success: true, data: merged },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('API POST /api/church-data error:', error);
     return NextResponse.json({ success: false, error: error?.message || 'Server error' }, { status: 500 });
