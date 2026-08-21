@@ -36,6 +36,7 @@ export function Hero() {
   // Start muted to comply strictly with mobile browser autoplay policies
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isHeroVisible, setIsHeroVisible] = useState(true);
   const [customBlobUrl, setCustomBlobUrl] = useState<string | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const youtubeIframeRef = useRef<HTMLIFrameElement>(null);
@@ -201,10 +202,18 @@ export function Hero() {
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio > 0.1) {
             isHeroVisibleRef.current = true;
+            setIsHeroVisible(true);
             safePlay();
+            if (isYouTube && youtubeIframeRef.current?.contentWindow) {
+              youtubeIframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo' }), '*');
+            }
           } else {
             isHeroVisibleRef.current = false;
+            setIsHeroVisible(false);
             safePause();
+            if (isYouTube && youtubeIframeRef.current?.contentWindow) {
+              youtubeIframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo' }), '*');
+            }
           }
         });
       },
@@ -220,15 +229,23 @@ export function Hero() {
       const heroHeight = currentSection.offsetHeight || 600;
       const scrollY = window.scrollY || window.pageYOffset || 0;
 
-      if (scrollY > heroHeight * 0.6) {
+      if (scrollY > heroHeight * 0.7) {
         if (isHeroVisibleRef.current) {
           isHeroVisibleRef.current = false;
+          setIsHeroVisible(false);
           safePause();
+          if (isYouTube && youtubeIframeRef.current?.contentWindow) {
+            youtubeIframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo' }), '*');
+          }
         }
       } else if (scrollY < heroHeight * 0.35) {
         if (!isHeroVisibleRef.current) {
           isHeroVisibleRef.current = true;
+          setIsHeroVisible(true);
           safePlay();
+          if (isYouTube && youtubeIframeRef.current?.contentWindow) {
+            youtubeIframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo' }), '*');
+          }
         }
       }
     };
@@ -249,7 +266,7 @@ export function Hero() {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [safePause, safePlay]);
+  }, [safePause, safePlay, isYouTube]);
 
   const toggleSound = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -332,8 +349,15 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-10 pointer-events-none" />
       </div>
 
-      {/* Floating Audio Controls - Dedicated button to listen to video audio */}
-      <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-30 flex items-center gap-2 bg-black/85 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full text-white text-[10px] font-semibold tracking-wider shadow-2xl">
+      {/* Floating Audio Controls - Always active in Hero, deactivates when scrolling down to other sections */}
+      <div 
+        id="hero-floating-audio-control"
+        className={`fixed bottom-20 right-4 sm:bottom-22 sm:right-6 z-30 flex items-center gap-2 bg-black/90 backdrop-blur-md border border-white/25 px-3.5 py-2 rounded-full text-white text-[10px] font-semibold tracking-wider shadow-2xl transition-all duration-400 ease-out ${
+          isHeroVisible 
+            ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' 
+            : 'opacity-0 translate-y-6 scale-95 pointer-events-none'
+        }`}
+      >
         <span className={`w-2 h-2 rounded-full mr-0.5 ${!isMuted ? 'bg-emerald-500 animate-pulse' : 'bg-[#C5A059]'}`} />
         <span className="uppercase text-neutral-300 text-[9px] sm:text-[10px] hidden xs:inline">
           {isYouTube ? 'Áudio do Vídeo' : 'Vídeo Ao Vivo'}
@@ -342,6 +366,7 @@ export function Hero() {
         
         {/* Main Audio Button requested by user */}
         <button
+          id="hero-btn-toggle-sound"
           onClick={toggleSound}
           aria-label={isMuted ? 'Ouvir áudio do vídeo' : 'Silenciar áudio do vídeo'}
           className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-bold text-[9px] sm:text-[10px] shadow-md ${
@@ -371,6 +396,7 @@ export function Hero() {
 
         {!isYouTube && (
           <button
+            id="hero-btn-toggle-play"
             onClick={togglePlay}
             aria-label={isPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
             className="p-1 text-neutral-300 hover:text-white transition-colors cursor-pointer"
@@ -382,6 +408,7 @@ export function Hero() {
 
         {isYouTube && (
           <a
+            id="hero-btn-open-youtube"
             href={getYouTubeWatchUrl(rawVideo)}
             target="_blank"
             rel="noopener noreferrer"
