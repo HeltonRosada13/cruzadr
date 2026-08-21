@@ -6,7 +6,7 @@ import { PhotoItem, ChurchEvent } from '@/lib/types';
 import { saveHeroVideoBlob, clearHeroVideoBlob, saveVideoFileBlob, generateVideoThumbnailAndDuration } from '@/lib/videoStorage';
 import { processAndOptimizeImage } from '@/lib/imageUtils';
 import { AdminHighlightsTab } from '@/components/AdminHighlightsTab';
-import { isYouTubeVideoUrl, formatYouTubeEmbedUrl } from '@/lib/utils';
+import { isYouTubeVideoUrl, formatYouTubeEmbedUrl, extractYouTubeId } from '@/lib/utils';
 import Image from 'next/image';
 import { 
   Settings, 
@@ -545,7 +545,7 @@ function AdminManagerModalInner() {
     }
   };
 
-  const handleAddVideoSubmit = (e: React.FormEvent) => {
+  const handleAddVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // If the user hasn't chosen or typed a video yet, immediately open the device's video & photo folders!
     if (!newVideo.videoUrl) {
@@ -556,11 +556,10 @@ function AdminManagerModalInner() {
     let embedUrl = newVideo.videoUrl.trim();
     let thumbUrl = newVideo.thumbnailUrl ? newVideo.thumbnailUrl.trim() : '';
 
-    const ytMatch = embedUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    if (ytMatch && ytMatch[1]) {
-      const ytId = ytMatch[1];
-      embedUrl = `https://www.youtube.com/embed/${ytId}`;
-      if (!thumbUrl) {
+    const ytId = extractYouTubeId(embedUrl);
+    if (ytId) {
+      embedUrl = `https://www.youtube.com/watch?v=${ytId}`;
+      if (!thumbUrl || thumbUrl.includes('unsplash')) {
         thumbUrl = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
       }
     }
@@ -569,7 +568,7 @@ function AdminManagerModalInner() {
       thumbUrl = 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80';
     }
 
-    const titleToUse = newVideo.title.trim() || 'Momento em Destaque';
+    const titleToUse = newVideo.title.trim() || (ytId ? 'Vídeo do YouTube' : 'Momento em Destaque');
     const finalVideoId = uploadedGalleryVideoId || ('v-' + Date.now().toString());
 
     if (replaceOldVideosOnUpload) {
@@ -585,9 +584,8 @@ function AdminManagerModalInner() {
     });
 
     if (setAsHeroVideoOnUpload) {
-      clearHeroVideoBlob().catch(() => {});
+      await clearHeroVideoBlob().catch(() => {});
       updateCurrentActivity({ heroVideo: embedUrl });
-      syncNowWithCloud();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('hero-video-updated', { detail: { blobUrl: embedUrl } }));
       }
@@ -596,6 +594,9 @@ function AdminManagerModalInner() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('gallery-video-updated', { detail: { id: finalVideoId, blobUrl: embedUrl } }));
     }
+
+    // Force instant cloud sync so all browsers and devices get this video immediately
+    await syncNowWithCloud();
 
     setUploadedGalleryVideoId(null);
     setNewVideo({
@@ -610,8 +611,8 @@ function AdminManagerModalInner() {
     setUploadedGalleryVideoMeta(null);
     showNotification(
       setAsHeroVideoOnUpload
-        ? 'Vídeo publicado na Galeria e definido como Vídeo do Hero no Cabeçalho!'
-        : 'Vídeo publicado com sucesso na Galeria do site!'
+        ? `Vídeo "${titleToUse}" publicado com sucesso na Galeria e no Cabeçalho (Hero)!`
+        : `Vídeo "${titleToUse}" publicado com sucesso na Galeria do site!`
     );
   };
 
@@ -1725,12 +1726,12 @@ function AdminManagerModalInner() {
                     <div className="flex gap-2 items-center">
                       <input
                         type="text"
-                        placeholder="https://www.youtube.com/watch?v=... ou selecione um ficheiro das pastas"
+                        placeholder="Cole o link do YouTube (ex: https://www.youtube.com/watch?v=... ou https://youtu.be/...)"
                         value={newVideo.videoUrl}
                         onChange={(e) => {
                           const url = e.target.value;
-                          const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-                          const autoThumb = ytMatch && ytMatch[1] ? `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg` : newVideo.thumbnailUrl;
+                          const ytId = extractYouTubeId(url);
+                          const autoThumb = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : newVideo.thumbnailUrl;
                           setNewVideo({ 
                             ...newVideo, 
                             videoUrl: url,
@@ -1761,9 +1762,16 @@ function AdminManagerModalInner() {
                         className="w-16 h-10 rounded-sm object-cover bg-neutral-100 shrink-0"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="truncate text-xs text-neutral-700">
-                        <span className="font-bold text-neutral-900 block truncate">Miniatura Pronta</span>
-                        <span className="text-[10px] text-neutral-500 font-light truncate">{newVideo.duration} • Pronto para publicação</span>
+                      <div className="truncate text-xs text-neutral-700 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-neutral-900 block truncate">Miniatura Pronta</span>
+                          {extractYouTubeId(newVideo.videoUrl) && (
+                            <span className="px-1.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[9px] font-bold uppercase">
+                              YouTube Reconhecido
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-neutral-500 font-light truncate">{newVideo.duration} • Pronto para publicação imediata</span>
                       </div>
                     </div>
                   )}
