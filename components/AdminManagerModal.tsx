@@ -52,7 +52,7 @@ import {
   Lock,
   KeyRound,
   ShieldCheck,
-  EyeOff
+  LogOut
 } from 'lucide-react';
 
 export function AdminManagerModal() {
@@ -62,11 +62,15 @@ export function AdminManagerModal() {
 }
 
 function AdminManagerModalInner() {
-  // Password authentication state for Admin Panel (Password: CAF2026)
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('caf_admin_authenticated') === 'true';
+    }
+    return false;
+  });
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+
   const { 
     data, 
     isAdminOpen, 
@@ -673,12 +677,24 @@ function AdminManagerModalInner() {
     if (passwordInput.trim() === 'CAF2026') {
       setIsAuthenticated(true);
       setPasswordError(false);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('caf_admin_authenticated', 'true');
+      }
     } else {
       setPasswordError(true);
     }
   };
 
-  // If not authenticated, display the secure password challenge screen
+  const handleLogoutAdmin = () => {
+    setIsAuthenticated(false);
+    setPasswordInput('');
+    setPasswordError(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('caf_admin_authenticated');
+    }
+  };
+
+  // Se não estiver autenticado, exibir tela de senha com campo oculto / mascarado
   if (!isAuthenticated) {
     return (
       <div
@@ -699,49 +715,41 @@ function AdminManagerModalInner() {
               <Lock className="w-6 h-6 stroke-[1.8]" />
             </div>
             <h3 className="text-lg sm:text-xl font-bold font-editorial text-neutral-900 tracking-tight">
-              Acesso ao Painel Administrativo
+              Área Restrita do Administrador
             </h3>
             <p className="text-xs text-neutral-500 font-light max-w-xs mx-auto">
-              Digite a senha de administrador da <strong>Catedral de Amor e Fé</strong> para gerenciar as atividades e publicações.
+              Digite a senha autorizada para gerenciar publicações e configurações da igreja.
             </p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1.5 flex items-center justify-between">
-                <span>Senha de Acesso</span>
-                <span className="text-[9px] text-neutral-400 font-normal">Chave Administrativa</span>
+                <span>Senha de Segurança</span>
+                <span className="text-[9px] text-neutral-400 font-normal">Acesso Protegido</span>
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type="password"
                   autoFocus
-                  placeholder="Insira a senha (ex: CAF2026)"
+                  placeholder="••••••••••••"
                   value={passwordInput}
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
                     if (passwordError) setPasswordError(false);
                   }}
-                  className={`w-full px-3.5 py-2.5 pr-10 rounded-sm bg-white border text-sm text-neutral-900 tracking-wider focus:outline-none transition-colors ${
+                  className={`w-full px-3.5 py-2.5 rounded-sm bg-white border text-sm text-neutral-900 tracking-widest focus:outline-none transition-colors ${
                     passwordError 
                       ? 'border-red-500 ring-1 ring-red-500' 
                       : 'border-neutral-300 focus:border-black'
                   }`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
-                  aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
 
               {passwordError && (
-                <div className="mt-2 p-2 rounded-sm bg-red-50 border border-red-200 text-[11px] text-red-700 flex items-center gap-1.5 animate-shake">
+                <div className="mt-2 p-2.5 rounded-sm bg-red-50 border border-red-200 text-[11px] text-red-700 flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                  <span>Senha incorreta. Por favor, digite <strong>CAF2026</strong>.</span>
+                  <span>Senha incorreta. Acesso negado.</span>
                 </div>
               )}
             </div>
@@ -759,7 +767,7 @@ function AdminManagerModalInner() {
                 className="flex-1 py-2.5 px-4 rounded-sm bg-[#1A1A1A] hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow"
               >
                 <KeyRound className="w-3.5 h-3.5 text-[#C5A059]" />
-                <span>Entrar no Painel</span>
+                <span>Entrar</span>
               </button>
             </div>
           </form>
@@ -840,10 +848,20 @@ function AdminManagerModalInner() {
                 {syncState === 'syncing' ? 'A Sincronizar...' : 'Sincronizar Cloud'}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={handleLogoutAdmin}
+              className="p-2 rounded-sm bg-neutral-100 hover:bg-red-50 text-neutral-600 hover:text-red-700 transition-colors cursor-pointer border border-neutral-200"
+              title="Bloquear painel / Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
             
             <button
               onClick={() => setIsAdminOpen(false)}
               className="p-2 rounded-sm bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black transition-colors cursor-pointer"
+              title="Fechar janela"
             >
               <X className="w-4 h-4" />
             </button>
