@@ -9,7 +9,8 @@ import {
   onSnapshot, 
   collection, 
   addDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  setLogLevel
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -27,6 +28,10 @@ try {
   const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId || 'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
   db = getFirestore(app, firestoreDatabaseId);
   auth = getAuth(app);
+  // Set Firestore log level to silent/error to avoid noisy backoff warnings in console
+  try {
+    setLogLevel('error');
+  } catch {}
 } catch (error) {
   console.warn('Firebase initialization notice:', error);
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);

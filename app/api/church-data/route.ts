@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { initialChurchData } from '@/lib/churchData';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,7 +12,52 @@ const FIRESTORE_DATABASE_ID =
   'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
 const FIRESTORE_DOC_PATH = 'church_data';
 const FIRESTORE_DOC_ID = 'main';
-const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DATABASE_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}`;
+
+// Server-side persistent storage file path
+const SERVER_DATA_FILE = path.join('/tmp', 'church_data_persisted.json');
+
+// In-memory server cache
+let serverState: any = null;
+
+function loadServerStateFromFile(): any {
+  if (serverState) return serverState;
+  try {
+    if (fs.existsSync(SERVER_DATA_FILE)) {
+      const raw = fs.readFileSync(SERVER_DATA_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        serverState = { ...initialChurchData, ...parsed };
+        return serverState;
+      }
+    }
+  } catch (err) {
+    console.warn('Server file read notice:', err);
+  }
+  serverState = { ...initialChurchData };
+  return serverState;
+}
+
+function saveServerStateToFile(data: any) {
+  try {
+    serverState = { ...initialChurchData, ...data };
+    fs.writeFileSync(SERVER_DATA_FILE, JSON.stringify(serverState, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Server file write notice:', err);
+  }
+}
+
+// Initial load
+loadServerStateFromFile();
+
+function getFirestoreRestUrls() {
+  const apiKey = firebaseConfig.apiKey || '';
+  const keyParam = apiKey ? `?key=${apiKey}` : '';
+  const urls = [
+    `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DATABASE_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${keyParam}`,
+    `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${keyParam}`,
+  ];
+  return urls;
+}
 
 function parseFirestoreValue(val: any): any {
   if (!val || typeof val !== 'object') return null;
@@ -73,33 +120,52 @@ function toFirestoreRestDoc(obj: Record<string, any>): { fields: Record<string, 
 }
 
 export async function GET() {
-  try {
-    const res = await fetch(FIRESTORE_REST_URL, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      cache: 'no-store',
-    });
+  const currentState = loadServerStateFromFile();
 
-    if (res.ok) {
-      const data = await res.json();
-      const parsed = parseFirestoreRestDoc(data);
-      if (parsed) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            ...initialChurchData,
-            ...parsed,
-          },
-        });
+  const urls = getFirestoreRestUrls();
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const parsed = parseFirestoreRestDoc(data);
+        if (parsed) {
+          const remoteTs = typeof parsed.editTimestamp === 'number'
+            ? parsed.editTimestamp
+            : (parsed.lastUpdatedAt ? new Date(parsed.lastUpdatedAt).getTime() : 0);
+          const serverTs = typeof currentState?.editTimestamp === 'number'
+            ? currentState.editTimestamp
+            : 0;
+
+          // If remote is newer or equals, merge and cache
+          if (remoteTs >= serverTs) {
+            const merged = {
+              ...initialChurchData,
+              ...currentState,
+              ...parsed,
+            };
+            saveServerStateToFile(merged);
+            return NextResponse.json({
+              success: true,
+              data: merged,
+            });
+          }
+        }
       }
+    } catch (error) {
+      console.warn(`API GET /api/church-data error on ${url}:`, error);
     }
-  } catch (error) {
-    console.error('API GET /api/church-data error:', error);
   }
 
+  // Return server stored state (which holds the user's latest edits across sessions/browsers)
   return NextResponse.json({
     success: true,
-    data: initialChurchData,
+    data: currentState || initialChurchData,
   });
 }
 
@@ -110,31 +176,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 });
     }
 
-    const payload = toFirestoreRestDoc({
+    const editTimestamp = body.editTimestamp || Date.now();
+    const merged = {
+      ...initialChurchData,
+      ...loadServerStateFromFile(),
       ...body,
+      editTimestamp,
       lastUpdatedAt: new Date().toISOString(),
-      editTimestamp: Date.now(),
-    });
+    };
 
-    const res = await fetch(FIRESTORE_REST_URL, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    // 1. Immediately save to server filesystem and memory cache
+    saveServerStateToFile(merged);
 
-    if (res.ok) {
-      const result = await res.json();
-      const parsed = parseFirestoreRestDoc(result);
-      return NextResponse.json({ success: true, data: parsed });
-    } else {
-      const errText = await res.text();
-      return NextResponse.json({ success: false, error: errText }, { status: res.status });
+    // 2. Sync to cloud Firestore in background
+    const payload = toFirestoreRestDoc(merged);
+    const urls = getFirestoreRestUrls();
+
+    for (const url of urls) {
+      fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.warn('Background Firestore sync notice:', err?.message || err);
+      });
     }
+
+    return NextResponse.json({ success: true, data: merged });
   } catch (error: any) {
     console.error('API POST /api/church-data error:', error);
     return NextResponse.json({ success: false, error: error?.message || 'Server error' }, { status: 500 });
   }
 }
+

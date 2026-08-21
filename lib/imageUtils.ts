@@ -13,9 +13,9 @@ export interface ProcessedImageResult {
 
 export async function processAndOptimizeImage(
   file: File,
-  maxWidth: number = 1600,
-  maxHeight: number = 1600,
-  quality: number = 0.85
+  maxWidth: number = 1000,
+  maxHeight: number = 1000,
+  quality: number = 0.75
 ): Promise<ProcessedImageResult> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {

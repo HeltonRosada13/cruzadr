@@ -243,7 +243,9 @@ function subscribeChurchStore(listener: () => void) {
 import firebaseConfig from '../firebase-applet-config.json';
 
 const FIRESTORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId || 'ai-studio-igrejacatedralde-1689f903-4252-4c97-842d-c7bb1fa516bf';
-const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DATABASE_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}`;
+const API_KEY = firebaseConfig.apiKey || '';
+const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DATABASE_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${API_KEY ? `?key=${API_KEY}` : ''}`;
+const FIRESTORE_REST_DEFAULT_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${API_KEY ? `?key=${API_KEY}` : ''}`;
 
 function parseFirestoreValue(val: any): any {
   if (!val || typeof val !== 'object') return null;
@@ -306,67 +308,121 @@ function toFirestoreRestDoc(obj: Record<string, any>): { fields: Record<string, 
 }
 
 async function fetchFirestoreRestDoc(): Promise<Record<string, any> | null> {
+  // 1. Try our internal server route /api/church-data
   try {
-    const res = await fetch(FIRESTORE_REST_URL, {
+    const apiRes = await fetch('/api/church-data', {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       cache: 'no-store',
     });
-    if (res.ok) {
-      const data = await res.json();
-      return parseFirestoreRestDoc(data);
+    if (apiRes.ok) {
+      const json = await apiRes.json();
+      if (json.success && json.data) {
+        return json.data;
+      }
     }
-  } catch (err) {
-    console.warn('REST API fetch notice:', err);
+  } catch {
+    // continue to direct REST fallbacks
+  }
+
+  // 2. Direct Firestore REST endpoints with apiKey
+  const endpoints = [FIRESTORE_REST_URL, FIRESTORE_REST_DEFAULT_URL];
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const parsed = parseFirestoreRestDoc(data);
+        if (parsed) return parsed;
+      }
+    } catch (err) {
+      console.warn('REST API fetch notice:', err);
+    }
   }
   return null;
 }
 
 async function saveFirestoreRestDoc(state: Record<string, any>): Promise<{ ok: boolean; isQuota?: boolean }> {
+  // 1. First save via /api/church-data
+  let savedViaApi = false;
   try {
-    const payload = toFirestoreRestDoc(state);
-    const res = await fetch(FIRESTORE_REST_URL, {
-      method: 'PATCH',
+    const apiRes = await fetch('/api/church-data', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(state),
     });
-
-    if (res.ok) {
-      return { ok: true };
+    if (apiRes.ok) {
+      savedViaApi = true;
     }
-
-    if (res.status === 429) {
-      return { ok: false, isQuota: true };
-    }
-
-    const errText = await res.text().catch(() => '');
-    const isQuota = 
-      errText.includes('RESOURCE_EXHAUSTED') || 
-      errText.includes('Quota exceeded') || 
-      errText.includes('Quota limit exceeded');
-
-    return { ok: false, isQuota };
   } catch (err) {
-    console.warn('REST API patch notice:', err);
-    return { ok: false };
+    console.warn('API POST notice:', err);
   }
+
+  // 2. Direct Firestore REST endpoints with apiKey
+  const payload = toFirestoreRestDoc(state);
+  const endpoints = [FIRESTORE_REST_URL, FIRESTORE_REST_DEFAULT_URL];
+  let isQuota = false;
+  let savedViaRest = false;
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        savedViaRest = true;
+        break;
+      }
+
+      if (res.status === 429) {
+        isQuota = true;
+      } else {
+        const errText = await res.text().catch(() => '');
+        if (
+          errText.includes('RESOURCE_EXHAUSTED') ||
+          errText.includes('Quota exceeded') ||
+          errText.includes('Quota limit exceeded')
+        ) {
+          isQuota = true;
+        }
+      }
+    } catch (err) {
+      console.warn('REST API patch notice:', err);
+    }
+  }
+
+  if (savedViaApi || savedViaRest) {
+    return { ok: true };
+  }
+
+  return { ok: false, isQuota };
 }
 
 async function persistToFirestore(state: ChurchSettings, force = false): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  // If daily write quota was exceeded and this is an automatic background save, avoid hammering the API
-  if (isFirestoreQuotaExceeded && !force) {
-    return false;
-  }
-
   // Deduplication: Avoid writing if data is identical to last persisted payload
   const currentPayloadJson = JSON.stringify(state);
   if (currentPayloadJson === lastPersistedPayloadJson && !force) {
     return true;
+  }
+
+  // If daily write quota was exceeded and this is an automatic background save, avoid hammering the API
+  if (isFirestoreQuotaExceeded && !force) {
+    return false;
   }
 
   const path = `${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}`;
@@ -379,7 +435,7 @@ async function persistToFirestore(state: ChurchSettings, force = false): Promise
     lastUpdatedAt: new Date().toISOString(),
   }));
 
-  // 1. Primary write method: REST API (clean stateless HTTP request, doesn't lock SDK write stream on 429)
+  // 1. Primary write method: Server API route & REST API
   try {
     const restResult = await saveFirestoreRestDoc(safePayload);
     if (restResult.ok) {
@@ -388,20 +444,19 @@ async function persistToFirestore(state: ChurchSettings, force = false): Promise
       setQuotaExceededStored(false);
       if (onQuotaStateChange) onQuotaStateChange(false);
       return true;
-    }
-
-    if (restResult.isQuota) {
+    } else if (restResult.isQuota) {
       isFirestoreQuotaExceeded = true;
       setQuotaExceededStored(true);
       if (onQuotaStateChange) onQuotaStateChange(true);
       console.warn('[Firestore Quota] Limite diário de gravações do Firestore atingido. Alterações salvas com segurança no armazenamento local.');
+      // Do NOT call SDK setDoc when quota is exceeded to prevent infinite retry loops & console backoff warnings
       return false;
     }
   } catch (err) {
     console.warn('REST save error:', err);
   }
 
-  // 2. Secondary fallback write: Firestore Web SDK (only if REST was unreachable, not if quota was hit)
+  // 2. Secondary fallback write: Firestore Web SDK (only if REST was unreachable and NOT in quota exceeded state)
   if (!isFirestoreQuotaExceeded) {
     try {
       const mainDocRef = doc(db, FIRESTORE_DOC_PATH, FIRESTORE_DOC_ID);
@@ -457,8 +512,8 @@ function updateChurchStore(updater: (prev: ChurchSettings) => ChurchSettings, im
     persistToFirestore(memoryState, true);
   } else {
     saveDebounceTimer = setTimeout(() => {
-      persistToFirestore(memoryState, true);
-    }, 100);
+      persistToFirestore(memoryState, false);
+    }, 600);
   }
 }
 
@@ -526,6 +581,14 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       const remoteTs = typeof remoteData.editTimestamp === 'number'
         ? remoteData.editTimestamp
         : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
+      const currentLocalTs = getStoredLocalEditTimestamp() || 0;
+
+      // CRITICAL CHECK: If current local edits are newer than the remote data, do NOT overwrite local edits with stale remote data!
+      if (currentLocalTs > 0 && remoteTs > 0 && currentLocalTs > remoteTs + 1500) {
+        console.log('[ChurchContext] Local modifications are newer than remote state. Preserving local edits and updating remote.');
+        persistToFirestore(memoryState, true);
+        return;
+      }
 
       const finalPhotos = Array.isArray(remoteData.photos) ? remoteData.photos : initialChurchData.photos;
       const finalVideos = Array.isArray(remoteData.videos) ? remoteData.videos : initialChurchData.videos;
@@ -632,7 +695,6 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
             isInitialRemoteLoadDone.current = true;
           },
           (error) => {
-            console.warn('Firebase onSnapshot notice:', error);
             const errObj = error as { message?: string; code?: string };
             const errString = errObj?.message || String(error);
             const isQuota = 
@@ -642,9 +704,12 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
               errObj?.code === 'resource-exhausted';
 
             if (isQuota) {
+              isFirestoreQuotaExceeded = true;
+              setQuotaExceededStored(true);
               setSyncState('quota_exceeded');
             } else {
               setSyncState('offline');
+              console.warn('Firebase onSnapshot notice:', error);
             }
           }
         );
@@ -655,7 +720,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
 
     setupFirestoreListener();
 
-    // 4. Background REST Poller to guarantee cross-browser & mobile instant updates
+    // 4. Background REST Poller: Gentle interval to conserve quota while syncing
     const pollInterval = setInterval(() => {
       fetchFirestoreRestDoc().then((remoteData) => {
         if (remoteData) {
@@ -672,16 +737,14 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => {
         // silent
       });
-    }, 3500);
+    }, 45000);
 
     // Re-verify connection when window regains focus or comes back from background
     const handleVisibilityOrFocus = () => {
-      fetchFirestoreRestDoc().then((remoteData) => {
-        if (remoteData) applyRemoteData(remoteData);
-      }).catch(() => {});
-
-      if (document.visibilityState === 'visible' && !unsubscribe) {
-        setupFirestoreListener();
+      if (document.visibilityState === 'visible') {
+        fetchFirestoreRestDoc().then((remoteData) => {
+          if (remoteData) applyRemoteData(remoteData);
+        }).catch(() => {});
       }
     };
 
