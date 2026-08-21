@@ -48,7 +48,11 @@ import {
   MessageCircle,
   Globe,
   Copy,
-  Download
+  Download,
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  EyeOff
 } from 'lucide-react';
 
 export function AdminManagerModal() {
@@ -58,6 +62,11 @@ export function AdminManagerModal() {
 }
 
 function AdminManagerModalInner() {
+  // Password authentication state for Admin Panel (Password: CAF2026)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { 
     data, 
     isAdminOpen, 
@@ -658,6 +667,113 @@ function AdminManagerModalInner() {
     setEditingEventId(null);
     setEditingEventForm(null);
   };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput.trim() === 'CAF2026') {
+      setIsAuthenticated(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  // If not authenticated, display the secure password challenge screen
+  if (!isAuthenticated) {
+    return (
+      <div
+        id="admin-management-modal"
+        className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+      >
+        <div className="relative w-full max-w-md bg-[#FDFDFC] rounded-sm overflow-hidden border border-neutral-300 shadow-2xl p-6 sm:p-8 space-y-6">
+          <button
+            onClick={() => setIsAdminOpen(false)}
+            aria-label="Fechar"
+            className="absolute top-4 right-4 p-2 rounded-sm text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="text-center space-y-2 pt-2">
+            <div className="w-12 h-12 rounded-sm bg-[#1A1A1A] text-[#C5A059] flex items-center justify-center mx-auto shadow-md">
+              <Lock className="w-6 h-6 stroke-[1.8]" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold font-editorial text-neutral-900 tracking-tight">
+              Acesso ao Painel Administrativo
+            </h3>
+            <p className="text-xs text-neutral-500 font-light max-w-xs mx-auto">
+              Digite a senha de administrador da <strong>Catedral de Amor e Fé</strong> para gerenciar as atividades e publicações.
+            </p>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1.5 flex items-center justify-between">
+                <span>Senha de Acesso</span>
+                <span className="text-[9px] text-neutral-400 font-normal">Chave Administrativa</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoFocus
+                  placeholder="Insira a senha (ex: CAF2026)"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    if (passwordError) setPasswordError(false);
+                  }}
+                  className={`w-full px-3.5 py-2.5 pr-10 rounded-sm bg-white border text-sm text-neutral-900 tracking-wider focus:outline-none transition-colors ${
+                    passwordError 
+                      ? 'border-red-500 ring-1 ring-red-500' 
+                      : 'border-neutral-300 focus:border-black'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {passwordError && (
+                <div className="mt-2 p-2 rounded-sm bg-red-50 border border-red-200 text-[11px] text-red-700 flex items-center gap-1.5 animate-shake">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                  <span>Senha incorreta. Por favor, digite <strong>CAF2026</strong>.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAdminOpen(false)}
+                className="flex-1 py-2.5 px-4 rounded-sm border border-neutral-300 text-xs font-bold uppercase tracking-wider text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2.5 px-4 rounded-sm bg-[#1A1A1A] hover:bg-black text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>Entrar no Painel</span>
+              </button>
+            </div>
+          </form>
+
+          <div className="pt-2 border-t border-neutral-100 text-center">
+            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-mono flex items-center justify-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              Ambiente Seguro • Catedral de Amor e Fé
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
