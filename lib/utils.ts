@@ -6,28 +6,76 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function isYouTubeVideoUrl(url: string | undefined | null): boolean {
-  if (!url) return false;
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
   return (
-    url.includes('youtube.com') ||
-    url.includes('youtu.be') ||
-    url.includes('youtube-nocookie.com')
+    trimmed.includes('youtube.com') ||
+    trimmed.includes('youtu.be') ||
+    trimmed.includes('youtube-nocookie.com') ||
+    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i.test(trimmed)
   );
 }
 
-export function formatYouTubeEmbedUrl(url: string | undefined | null, autoPlay = false): string {
+export function extractYouTubeId(url: string | undefined | null): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  
+  // Handle various YouTube URL formats:
+  // - https://www.youtube.com/watch?v=VIDEO_ID
+  // - https://youtube.com/watch?v=VIDEO_ID&t=10s
+  // - https://youtu.be/VIDEO_ID
+  // - https://www.youtube.com/embed/VIDEO_ID
+  // - https://www.youtube.com/v/VIDEO_ID
+  // - https://www.youtube.com/shorts/VIDEO_ID
+  // - https://www.youtube.com/live/VIDEO_ID
+  // - https://youtube-nocookie.com/embed/VIDEO_ID
+  // - Raw 11-char YouTube ID
+  const patterns = [
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/)|youtube-nocookie\.com\/embed\/)([a-zA-Z0-9_-]{11})/i,
+    /^[a-zA-Z0-9_-]{11}$/
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      return match[1] || match[0];
+    }
+  }
+
+  return null;
+}
+
+export function formatYouTubeEmbedUrl(url: string | undefined | null, autoPlay = false, isBackground = false): string {
   if (!url) return '';
-  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=)|youtube-nocookie\.com\/embed\/)([\w-]{11})/);
-  if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}&playsinline=1&enablejsapi=1&rel=0&modestbranding=1`;
+  const videoId = extractYouTubeId(url);
+  if (videoId) {
+    const params = new URLSearchParams();
+    params.set('autoplay', autoPlay ? '1' : '0');
+    params.set('playsinline', '1');
+    params.set('enablejsapi', '1');
+    params.set('rel', '0');
+    params.set('modestbranding', '1');
+    
+    if (isBackground) {
+      params.set('mute', '1');
+      params.set('controls', '0');
+      params.set('loop', '1');
+      params.set('playlist', videoId); // Required by YouTube for single video looping
+      params.set('disablekb', '1');
+      params.set('fs', '0');
+      params.set('iv_load_policy', '3');
+    }
+
+    return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
   }
   return url;
 }
 
 export function getYouTubeWatchUrl(url: string | undefined | null): string {
   if (!url) return '';
-  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=)|youtube-nocookie\.com\/embed\/)([\w-]{11})/);
-  if (ytMatch && ytMatch[1]) {
-    return `https://www.youtube.com/watch?v=${ytMatch[1]}`;
+  const videoId = extractYouTubeId(url);
+  if (videoId) {
+    return `https://www.youtube.com/watch?v=${videoId}`;
   }
   return url;
 }

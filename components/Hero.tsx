@@ -303,7 +303,7 @@ export function Hero() {
         {isYouTube ? (
           <iframe
             ref={youtubeIframeRef}
-            src={formatYouTubeEmbedUrl(rawVideo, true) + '&mute=1&controls=0&loop=1&playsinline=1&enablejsapi=1'}
+            src={formatYouTubeEmbedUrl(rawVideo, true, true)}
             title={activity.name}
             className="w-full h-full border-0 absolute inset-0 pointer-events-none scale-125"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

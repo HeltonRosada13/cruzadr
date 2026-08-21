@@ -184,8 +184,11 @@ const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in 
   ? new BroadcastChannel('catedral_sync_channel_v1')
   : null;
 
-// SWR fetcher with fallback and local edit protection
+// SWR fetcher with robust fallback, local edit protection and auto cloud-seed
 const churchDataFetcher = async (): Promise<ChurchSettings> => {
+  const localState = getInitialLocalCachedState();
+  const currentLocalTs = getStoredLocalEditTimestamp() || 0;
+
   try {
     const res = await fetch(SWR_KEY, {
       method: 'GET',
@@ -200,18 +203,22 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
         const remoteTs = typeof remoteData.editTimestamp === 'number'
           ? remoteData.editTimestamp
           : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
-        const currentLocalTs = getStoredLocalEditTimestamp() || 0;
 
-        // If local edits are substantially newer, protect local edits
-        if (currentLocalTs > 0 && remoteTs > 0 && currentLocalTs > remoteTs + 1500) {
-          return getInitialLocalCachedState();
+        // If local user has newer unsynced edits, preserve them and push to server
+        if (currentLocalTs > 0 && currentLocalTs > remoteTs) {
+          // Asynchronously propagate local edits to server
+          persistToFirestore(localState, false).catch(() => {});
+          return localState;
         }
 
+        // Remote data is newer or equally fresh
         const sanitized = sanitizeSavedData(remoteData);
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
-            if (remoteTs > 0) setStoredLocalEditTimestamp(remoteTs);
+            if (remoteTs > 0) {
+              setStoredLocalEditTimestamp(remoteTs);
+            }
           } catch {}
         }
         return sanitized;
@@ -221,7 +228,7 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
     console.warn('SWR fetcher notice:', err);
   }
 
-  return getInitialLocalCachedState();
+  return localState;
 };
 
 let memoryState: ChurchSettings = initialChurchData;
@@ -413,19 +420,23 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
                 : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
               const currentLocalTs = getStoredLocalEditTimestamp() || 0;
 
-              // If remote is newer or equals local state, apply remote push immediately
-              if (!currentLocalTs || remoteTs >= currentLocalTs || (remoteTs > 0 && Math.abs(remoteTs - currentLocalTs) > 1500)) {
+              // If remote is strictly newer or local has no timestamp yet
+              if ((!currentLocalTs && remoteTs > 0) || (remoteTs > currentLocalTs)) {
                 const sanitized = sanitizeSavedData(remoteData);
                 memoryState = sanitized;
                 mutate(sanitized, false);
                 if (typeof window !== 'undefined') {
                   try {
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
-                    if (remoteTs > 0) setStoredLocalEditTimestamp(remoteTs);
+                    setStoredLocalEditTimestamp(remoteTs);
                   } catch {}
                 }
                 setLastSyncedAt(new Date());
                 setSyncState('synced');
+              } else if (currentLocalTs > 0 && currentLocalTs > remoteTs) {
+                // Local is newer: propagate local changes to Firestore
+                const local = getInitialLocalCachedState();
+                persistToFirestore(local, false).catch(() => {});
               }
             }
           }

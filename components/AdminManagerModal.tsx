@@ -1102,7 +1102,7 @@ function AdminManagerModalInner() {
                           const url = e.target.value;
                           setActivityForm({ ...activityForm, heroVideo: url });
                           if (url) {
-                            updateCurrentActivity({ heroVideo: url });
+                            updateCurrentActivity({ heroVideo: url.trim() });
                           }
                         }}
                         placeholder="Cole a URL do YouTube (ex: https://youtu.be/... ou https://youtube.com/watch?v=...) ou .mp4"
@@ -1112,13 +1112,14 @@ function AdminManagerModalInner() {
                         type="button"
                         onClick={async () => {
                           if (activityForm.heroVideo) {
+                            const trimmedUrl = activityForm.heroVideo.trim();
                             await clearHeroVideoBlob();
-                            updateCurrentActivity({ heroVideo: activityForm.heroVideo });
+                            updateCurrentActivity({ heroVideo: trimmedUrl });
                             syncNowWithCloud();
                             if (typeof window !== 'undefined') {
-                              window.dispatchEvent(new CustomEvent('hero-video-updated', { detail: { blobUrl: activityForm.heroVideo } }));
+                              window.dispatchEvent(new CustomEvent('hero-video-updated', { detail: { blobUrl: trimmedUrl } }));
                             }
-                            showNotification('Vídeo do Hero atualizado e sincronizado com sucesso!');
+                            showNotification('Vídeo do YouTube/Hero configurado e sincronizado com sucesso para todos os navegadores!');
                           }
                         }}
                         className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#C5A059] text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
