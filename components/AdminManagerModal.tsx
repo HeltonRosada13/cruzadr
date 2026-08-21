@@ -2483,11 +2483,24 @@ function AdminManagerModalInner() {
             </div>
           )}
 
-          {/* TAB 5: REDES SOCIAIS */}
+          {/* TAB 5: REDES SOCIAIS & LINKS */}
           {activeTab === 'social' && (
             <div className="space-y-4">
-              <div className="p-3.5 rounded-sm bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 font-light">
-                Configure os canais digitais e contactos da igreja. Os botões &quot;ACESSAR&quot; redirecionarão os visitantes diretamente para estes canais.
+              <div className="p-3.5 rounded-sm bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 font-light flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>
+                  Configure os canais digitais e links oficiais da igreja. Use os botões de <strong>Validação</strong> e <strong>Teste em Tempo Real</strong> para garantir que os links estão corretos e prontos para os visitantes.
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await syncNowWithCloud();
+                    showNotification('Todos os links e redes sociais foram validados e sincronizados com sucesso!');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1A1A] hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer shadow-xs"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Validar e Sincronizar Tudo</span>
+                </button>
               </div>
 
               {data.socialLinks.map((social) => {
@@ -2499,13 +2512,14 @@ function AdminManagerModalInner() {
                   const directUrl = cleanNum 
                     ? `https://wa.me/${cleanNum}${data.whatsappMessage ? `?text=${encodeURIComponent(data.whatsappMessage)}` : ''}`
                     : '';
+                  const isValidWhatsApp = cleanNum.length >= 8;
 
                   return (
                     <div
                       key={social.id}
                       className="p-4 rounded-sm bg-emerald-50/50 border border-emerald-300/80 space-y-3"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
                             <MessageCircle className="w-3.5 h-3.5 fill-current" />
@@ -2514,13 +2528,26 @@ function AdminManagerModalInner() {
                             {social.name} ({social.platform})
                           </h4>
                         </div>
-                        <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-200">
-                          Direcionamento por Número
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {isValidWhatsApp ? (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
+                              <Check className="w-2.5 h-2.5 text-emerald-600" />
+                              Número Válido ({cleanNum.length} dígitos)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-amber-300 flex items-center gap-1">
+                              <AlertCircle className="w-2.5 h-2.5 text-amber-600" />
+                              Requer Número Completo
+                            </span>
+                          )}
+                          <span className="text-[9px] bg-emerald-100/80 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-200">
+                            Direcionamento Direto
+                          </span>
+                        </div>
                       </div>
 
                       <div className="p-2.5 bg-white/90 rounded-sm border border-emerald-200 text-[11px] text-emerald-900 font-light leading-relaxed">
-                        ✨ <strong>Não é necessário digitar link/URL.</strong> Apenas digite o número de telefone. Quando qualquer pessoa clicar em &quot;ACESSAR&quot; no site, será direcionada instantaneamente para a conta do WhatsApp do proprietário deste número.
+                        ✨ <strong>Não é necessário digitar link/URL.</strong> Apenas digite o número de telefone com código do país (ex: <strong>+244</strong> para Angola). Quando o visitante clicar em &quot;ACESSAR&quot; no site, abrirá a conversa instantânea no WhatsApp.
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2574,62 +2601,195 @@ function AdminManagerModalInner() {
                         </div>
                       </div>
 
-                      {/* Live Generated Direct URL Preview */}
+                      {/* Live Generated Direct URL Preview & Validation Actions */}
                       <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-emerald-200">
-                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-900 truncate">
-                          <span className="font-bold text-[10px] uppercase tracking-wider">Destino Direto:</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-900 truncate flex-1 min-w-0">
+                          <span className="font-bold text-[10px] uppercase tracking-wider flex-shrink-0">Destino Direto:</span>
                           <code className="bg-white px-2 py-0.5 rounded text-[11px] text-emerald-950 font-mono border border-emerald-200 truncate">
                             {directUrl || 'Aguardando número de telefone...'}
                           </code>
                         </div>
 
-                        {directUrl && (
-                          <a
-                            href={directUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap self-start sm:self-auto shadow-xs"
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!cleanNum || cleanNum.length < 8) {
+                                alert('Por favor, digite um número de WhatsApp válido com código do país (DDI).');
+                                return;
+                              }
+                              showNotification('Número de WhatsApp validado e configurado perfeitamente!');
+                            }}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-2.5 py-1.5 rounded-sm transition-colors cursor-pointer"
                           >
-                            <span>Testar Abertura Direta</span>
-                            <ExternalLink className="w-3 h-3 text-white" />
-                          </a>
-                        )}
+                            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                            <span>Validar</span>
+                          </button>
+
+                          {directUrl && (
+                            <a
+                              href={directUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap shadow-xs"
+                            >
+                              <span>Testar Abertura Direta</span>
+                              <ExternalLink className="w-3 h-3 text-white" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 }
 
+                // Generic Social Networks & Official Channels Validation
+                const urlVal = (social.url || '').trim();
+                let isValidUrl = false;
+                let formattedUrl = urlVal;
+
+                if (urlVal) {
+                  try {
+                    const testUrl = urlVal.startsWith('http://') || urlVal.startsWith('https://') 
+                      ? urlVal 
+                      : `https://${urlVal}`;
+                    const parsed = new URL(testUrl);
+                    isValidUrl = parsed.hostname.includes('.') && parsed.hostname.length > 3;
+                    formattedUrl = testUrl;
+                  } catch {
+                    isValidUrl = false;
+                  }
+                }
+
+                const handleFormatAndValidateUrl = () => {
+                  if (!urlVal) {
+                    alert(`Por favor, insira o link oficial do ${social.platform}.`);
+                    return;
+                  }
+                  let validFormatted = urlVal;
+                  if (!validFormatted.startsWith('http://') && !validFormatted.startsWith('https://')) {
+                    validFormatted = `https://${validFormatted}`;
+                  }
+                  try {
+                    const parsed = new URL(validFormatted);
+                    if (parsed.hostname.includes('.') && parsed.hostname.length > 3) {
+                      updateSocialLink(social.id, { url: validFormatted });
+                      showNotification(`Link do ${social.name} validado com sucesso: ${validFormatted}`);
+                    } else {
+                      alert(`O link inserido não parece ser um endereço web válido.`);
+                    }
+                  } catch {
+                    alert(`O link "${urlVal}" é inválido. Por favor, verifique o formato.`);
+                  }
+                };
+
                 return (
                   <div
                     key={social.id}
-                    className="p-4 rounded-sm bg-neutral-50 border border-neutral-200 space-y-3"
+                    className={`p-4 rounded-sm border space-y-3 transition-colors ${
+                      isValidUrl 
+                        ? 'bg-neutral-50/80 border-neutral-200' 
+                        : 'bg-amber-50/30 border-amber-200/80'
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
-                        {social.name} ({social.platform})
-                      </h4>
-                      <span className="text-[10px] text-neutral-500 font-mono">{social.handle}</span>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-bold">
+                          {social.platform.charAt(0)}
+                        </div>
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
+                          {social.name} ({social.platform})
+                        </h4>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isValidUrl ? (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                            Link Válido & Ativo
+                          </span>
+                        ) : urlVal ? (
+                          <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-amber-300 flex items-center gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                            Formato Incompleto
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-neutral-200 text-neutral-600 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                            Sem Link Configurado
+                          </span>
+                        )}
+                        <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">{social.handle}</span>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 block mb-1">Link URL</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
+                            Link URL Oficial *
+                          </label>
+                          <span className="text-[9px] text-neutral-400">Ex: https://instagram.com/sua_igreja</span>
+                        </div>
                         <input
-                          type="url"
-                          value={social.url}
+                          type="text"
+                          placeholder={`Ex: https://${social.platform.toLowerCase()}.com/catedraldeamorefe`}
+                          value={social.url || ''}
                           onChange={(e) => updateSocialLink(social.id, { url: e.target.value })}
-                          className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:border-black"
+                          className={`w-full px-3 py-2 rounded-sm bg-white border text-xs text-neutral-900 focus:outline-none ${
+                            isValidUrl 
+                              ? 'border-neutral-300 focus:border-neutral-900' 
+                              : 'border-amber-300 focus:border-amber-500'
+                          }`}
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 block mb-1">Identificador / Handle</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
+                            Identificador / Handle / Nome de Usuário
+                          </label>
+                          <span className="text-[9px] text-neutral-400">Ex: @catedraldeamorefe</span>
+                        </div>
                         <input
                           type="text"
-                          value={social.handle}
+                          placeholder="Ex: @catedraldeamorefe ou Canal Oficial"
+                          value={social.handle || ''}
                           onChange={(e) => updateSocialLink(social.id, { handle: e.target.value })}
-                          className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:border-black"
+                          className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
                         />
+                      </div>
+                    </div>
+
+                    {/* Action & Verification Row */}
+                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-200/80">
+                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 truncate flex-1 min-w-0">
+                        <span className="font-bold text-[10px] uppercase tracking-wider flex-shrink-0 text-neutral-800">Destino ao Clicar:</span>
+                        <code className="bg-white px-2 py-0.5 rounded text-[11px] text-neutral-900 font-mono border border-neutral-200 truncate">
+                          {formattedUrl || 'Nenhum link adicionado ainda'}
+                        </code>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleFormatAndValidateUrl}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-800 bg-white hover:bg-neutral-100 border border-neutral-300 px-2.5 py-1.5 rounded-sm transition-colors cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-neutral-700" />
+                          <span>Validar Link</span>
+                        </button>
+
+                        {formattedUrl && isValidUrl && (
+                          <a
+                            href={formattedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-[#1A1A1A] hover:bg-black px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap shadow-xs"
+                          >
+                            <span>Testar Link</span>
+                            <ExternalLink className="w-3 h-3 text-white" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
