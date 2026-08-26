@@ -310,6 +310,35 @@ export const initialChurchData: ChurchSettings = {
       badgeText: 'Direto',
     },
   ],
+  coordinations: [
+    {
+      id: 'coord-musica-louvor',
+      name: 'Comissão Nacional De Música | Louvor Da Cruzada de Milagres do Dr Paul Enenche',
+      category: 'Música & Louvor',
+      description: 'Coordenação e alinhamento oficial de ministros de louvor, coral, instrumentistas e equipes de adoração para a Grande Cruzada de Milagres.',
+      leaderOrContact: 'Coordenação Nacional de Música',
+      whatsappLink: 'https://chat.whatsapp.com/join-musica-louvor',
+      isActive: true,
+    },
+    {
+      id: 'coord-protocolo',
+      name: 'Comissão Nacional De Protocolo Para A Cruzada Do Dr Paul Enenche',
+      category: 'Protocolo & Ordem',
+      description: 'Equipe responsável pelo acolhimento, recepção de autoridades, organização de assentos, segurança e condução no recinto.',
+      leaderOrContact: 'Coordenação Nacional de Protocolo',
+      whatsappLink: 'https://chat.whatsapp.com/join-protocolo',
+      isActive: true,
+    },
+    {
+      id: 'coord-evangelizacao',
+      name: 'Comissão Nacional de Envagelização Cruzada De milagres Dr Paul Enenche',
+      category: 'Evangelização & Missões',
+      description: 'Mobilização nas ruas, distribuição de convites, intercessão de campo e acolhimento das almas alcançadas para Cristo.',
+      leaderOrContact: 'Coordenação Nacional de Evangelização',
+      whatsappLink: 'https://chat.whatsapp.com/join-evangelizacao',
+      isActive: true,
+    },
+  ],
   testimonies: [
     {
       id: 't-1',

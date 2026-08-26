@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
-import { ChurchSettings, ChurchActivity, PhotoItem, VideoItem, ChurchEvent, SocialLink, HighlightMoment, Testimony } from './types';
+import { ChurchSettings, ChurchActivity, PhotoItem, VideoItem, ChurchEvent, SocialLink, HighlightMoment, Testimony, CoordinationGroup } from './types';
 import { initialChurchData } from './churchData';
 import { db, doc, setDoc, onSnapshot, handleFirestoreError, OperationType } from './firebase';
 import { deleteVideoFileBlob, clearAllStoredVideoBlobs, clearHeroVideoBlob } from './videoStorage';
@@ -37,6 +37,10 @@ interface ChurchContextType {
   updateTestimony: (id: string, updated: Partial<Testimony>) => void;
   removeTestimony: (id: string) => void;
   resetTestimoniesToDefaults: () => void;
+  addCoordination: (group: Omit<CoordinationGroup, 'id'>) => void;
+  updateCoordination: (id: string, updated: Partial<CoordinationGroup>) => void;
+  removeCoordination: (id: string) => void;
+  resetCoordinationsToDefaults: () => void;
   updateWorshipScheduleItem: (index: number, updated: { day: string; time: string; name: string }) => void;
   addWorshipScheduleItem: (item: { day: string; time: string; name: string }) => void;
   removeWorshipScheduleItem: (index: number) => void;
@@ -157,6 +161,7 @@ function sanitizeSavedData(savedRaw: string | Record<string, any>): ChurchSettin
       photos: Array.isArray(parsed?.photos) ? parsed.photos : initialChurchData.photos,
       videos: Array.isArray(parsed?.videos) ? parsed.videos : initialChurchData.videos,
       socialLinks: Array.isArray(parsed?.socialLinks) ? parsed.socialLinks : initialChurchData.socialLinks,
+      coordinations: Array.isArray(parsed?.coordinations) ? parsed.coordinations : (initialChurchData.coordinations || []),
       highlights: Array.isArray(parsed?.highlights) ? parsed.highlights : initialChurchData.highlights,
       testimonies: Array.isArray(parsed?.testimonies) ? parsed.testimonies : initialChurchData.testimonies,
       worshipSchedule: Array.isArray(parsed?.worshipSchedule) ? parsed.worshipSchedule : initialChurchData.worshipSchedule,
@@ -776,6 +781,40 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     }), true);
   }, [updateStore]);
 
+  const addCoordination = useCallback((groupData: Omit<CoordinationGroup, 'id'>) => {
+    const newGroup: CoordinationGroup = {
+      ...groupData,
+      id: 'coord-' + Date.now(),
+    };
+    updateStore((prev) => ({
+      ...prev,
+      coordinations: [...(prev.coordinations || []), newGroup],
+    }), true);
+  }, [updateStore]);
+
+  const updateCoordination = useCallback((id: string, updated: Partial<CoordinationGroup>) => {
+    updateStore((prev) => ({
+      ...prev,
+      coordinations: (prev.coordinations || []).map((item) =>
+        item.id === id ? { ...item, ...updated } : item
+      ),
+    }), true);
+  }, [updateStore]);
+
+  const removeCoordination = useCallback((id: string) => {
+    updateStore((prev) => ({
+      ...prev,
+      coordinations: (prev.coordinations || []).filter((item) => item.id !== id),
+    }), true);
+  }, [updateStore]);
+
+  const resetCoordinationsToDefaults = useCallback(() => {
+    updateStore((prev) => ({
+      ...prev,
+      coordinations: initialChurchData.coordinations || [],
+    }), true);
+  }, [updateStore]);
+
   const updateWorshipScheduleItem = useCallback((index: number, updated: { day: string; time: string; name: string }) => {
     updateStore((prev) => {
       const copy = [...prev.worshipSchedule];
@@ -843,6 +882,10 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         updateTestimony,
         removeTestimony,
         resetTestimoniesToDefaults,
+        addCoordination,
+        updateCoordination,
+        removeCoordination,
+        resetCoordinationsToDefaults,
         updateWorshipScheduleItem,
         addWorshipScheduleItem,
         removeWorshipScheduleItem,

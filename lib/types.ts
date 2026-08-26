@@ -86,6 +86,16 @@ export interface Testimony {
   date: string;
 }
 
+export interface CoordinationGroup {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  leaderOrContact?: string;
+  whatsappLink: string;
+  isActive?: boolean;
+}
+
 export interface ChurchSettings {
   churchName: string;
   logoPrefix?: string;
@@ -101,6 +111,7 @@ export interface ChurchSettings {
   cityCountry: string;
   worshipSchedule: Array<{ day: string; time: string; name: string }>;
   socialLinks: SocialLink[];
+  coordinations?: CoordinationGroup[];
   currentActivity: ChurchActivity;
   highlights: HighlightMoment[];
   photos: PhotoItem[];

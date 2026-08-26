@@ -2,11 +2,11 @@
 
 import React, { useState, useRef } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
-import { PhotoItem, ChurchEvent, Testimony } from '@/lib/types';
+import { PhotoItem, ChurchEvent, Testimony, CoordinationGroup } from '@/lib/types';
 import { saveHeroVideoBlob, clearHeroVideoBlob, saveVideoFileBlob, generateVideoThumbnailAndDuration } from '@/lib/videoStorage';
 import { processAndOptimizeImage } from '@/lib/imageUtils';
 import { AdminHighlightsTab } from '@/components/AdminHighlightsTab';
-import { isYouTubeVideoUrl, formatYouTubeEmbedUrl, extractYouTubeId } from '@/lib/utils';
+import { isYouTubeVideoUrl, formatYouTubeEmbedUrl, extractYouTubeId, resolveWhatsAppGroupLink } from '@/lib/utils';
 import Image from 'next/image';
 import { 
   Settings, 
@@ -55,7 +55,9 @@ import {
   ShieldCheck,
   LogOut,
   Quote,
-  MessageSquareHeart
+  MessageSquareHeart,
+  Users,
+  MessageSquare
 } from 'lucide-react';
 
 export function AdminManagerModal() {
@@ -101,6 +103,10 @@ function AdminManagerModalInner() {
     updateTestimony,
     removeTestimony,
     resetTestimoniesToDefaults,
+    addCoordination,
+    updateCoordination,
+    removeCoordination,
+    resetCoordinationsToDefaults,
     syncNowWithCloud,
     syncState,
     firebaseProjectId,
@@ -108,8 +114,27 @@ function AdminManagerModalInner() {
     firebaseConsoleUrl
   } = useChurch();
 
-  const [activeTab, setActiveTab] = useState<'activity' | 'highlights' | 'photos' | 'videos' | 'events' | 'testimonies' | 'social' | 'church' | 'cloud'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'highlights' | 'photos' | 'videos' | 'events' | 'testimonies' | 'social' | 'coordinations' | 'church' | 'cloud'>('activity');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Coordinations Form States
+  const [newCoordForm, setNewCoordForm] = useState({
+    name: '',
+    category: 'Música & Louvor',
+    description: '',
+    leaderOrContact: '',
+    whatsappLink: '',
+    isActive: true,
+  });
+  const [editingCoordId, setEditingCoordId] = useState<string | null>(null);
+  const [editCoordForm, setEditCoordForm] = useState({
+    name: '',
+    category: '',
+    description: '',
+    leaderOrContact: '',
+    whatsappLink: '',
+    isActive: true,
+  });
 
   // Video Upload States
   const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(null);
@@ -1042,6 +1067,7 @@ function AdminManagerModalInner() {
             { id: 'photos', label: `Fotos (${data.photos.length})`, icon: ImageIcon },
             { id: 'videos', label: `Vídeos (${data.videos.length})`, icon: Video },
             { id: 'events', label: `Próximas Atividades (${data.upcomingEvents.length})`, icon: Calendar },
+            { id: 'coordinations', label: `Coordenações (${data.coordinations?.length || 0})`, icon: Users },
             { id: 'testimonies', label: `Testemunhos (${data.testimonies?.length || 0})`, icon: MessageSquareHeart },
             { id: 'social', label: 'Redes Sociais & Links', icon: Share2 },
             { id: 'church', label: 'Igreja & Contactos', icon: Phone },
@@ -3233,6 +3259,431 @@ function AdminManagerModalInner() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: COORDENAÇÕES & COMISSÕES DA CRUZADA */}
+          {activeTab === 'coordinations' && (
+            <div className="space-y-6">
+              {/* Header Box */}
+              <div className="p-4 rounded-sm bg-gradient-to-r from-neutral-900 via-neutral-900 to-neutral-950 text-white border border-neutral-800 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#C5A059]" />
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                      Grupos de WhatsApp das Coordenações e Comissões
+                    </h3>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/40">
+                    Cruzada de Milagres
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-300 font-light leading-relaxed max-w-2xl">
+                  Adicione e edite os botões de direcionamento para os grupos do WhatsApp das comissões oficiais (ex: Comissão Nacional de Música e Louvor, Protocolo, Evangelização, Intercessão, etc.). Ao clicar no botão &quot;Coordenações&quot; no cabeçalho, os voluntários e fiéis poderão ingressar diretamente.
+                </p>
+              </div>
+
+              {/* Form: Add New Coordination Group */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newCoordForm.name.trim()) {
+                    alert('Por favor, informe o nome da comissão ou coordenação.');
+                    return;
+                  }
+                  if (!newCoordForm.whatsappLink.trim()) {
+                    alert('Por favor, informe o link do grupo do WhatsApp.');
+                    return;
+                  }
+
+                  const cleanLink = resolveWhatsAppGroupLink(newCoordForm.whatsappLink);
+
+                  addCoordination({
+                    name: newCoordForm.name.trim(),
+                    category: newCoordForm.category.trim() || 'Comissão Oficial',
+                    description: newCoordForm.description.trim(),
+                    leaderOrContact: newCoordForm.leaderOrContact.trim(),
+                    whatsappLink: cleanLink,
+                    isActive: newCoordForm.isActive,
+                  });
+
+                  setNewCoordForm({
+                    name: '',
+                    category: 'Música & Louvor',
+                    description: '',
+                    leaderOrContact: '',
+                    whatsappLink: '',
+                    isActive: true,
+                  });
+
+                  showNotification('Nova comissão adicionada com sucesso!');
+                }}
+                className="p-5 rounded-sm bg-neutral-50 border border-neutral-200 space-y-4"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-200 pb-2.5">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-[#C5A059]" />
+                    <span>Adicionar Nova Comissão / Grupo de WhatsApp</span>
+                  </h4>
+                  <span className="text-[10px] text-neutral-500 font-light">
+                    * Campos obrigatórios
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Nome da Comissão / Coordenação *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Comissão Nacional De Música | Louvor Da Cruzada de Milagres do Dr Paul Enenche"
+                      value={newCoordForm.name}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-[#C5A059] font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Categoria / Área de Atuação *
+                    </label>
+                    <select
+                      value={newCoordForm.category}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, category: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-[#C5A059]"
+                    >
+                      <option value="Música & Louvor">Música & Louvor</option>
+                      <option value="Protocolo & Ordem">Protocolo & Ordem</option>
+                      <option value="Evangelização & Missões">Evangelização & Missões</option>
+                      <option value="Intercessão & Oração">Intercessão & Oração</option>
+                      <option value="Comunicação & Mídia">Comunicação & Mídia</option>
+                      <option value="Logística & Transportes">Logística & Transportes</option>
+                      <option value="Segurança & Trânsito">Segurança & Trânsito</option>
+                      <option value="Consolidação & Acompanhamento">Consolidação & Acompanhamento</option>
+                      <option value="Outra Comissão Especial">Outra Comissão Especial</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Link do Grupo do WhatsApp (Convite oficial) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: https://chat.whatsapp.com/Gabc123456789xyz"
+                      value={newCoordForm.whatsappLink}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, whatsappLink: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-[#C5A059] font-mono"
+                    />
+                    <span className="text-[10px] text-neutral-500 mt-0.5 block">
+                      Insira o link de convite do grupo do WhatsApp (abre diretamente o link configurado).
+                    </span>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Descrição / Instruções aos Membros da Equipa (Opcional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Ex: Coordenação oficial para ensaios gerais, escalas e alinhamento espiritual de todos os coristas e instrumentistas..."
+                      value={newCoordForm.description}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, description: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-[#C5A059]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Líder ou Contacto de Referência (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Coordenação Nacional de Louvor"
+                      value={newCoordForm.leaderOrContact}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, leaderOrContact: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-[#C5A059]"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-5">
+                    <input
+                      type="checkbox"
+                      id="new-coord-active"
+                      checked={newCoordForm.isActive}
+                      onChange={(e) => setNewCoordForm({ ...newCoordForm, isActive: e.target.checked })}
+                      className="rounded text-neutral-900 focus:ring-0 cursor-pointer"
+                    />
+                    <label htmlFor="new-coord-active" className="text-xs text-neutral-700 font-medium cursor-pointer">
+                      Comissão activa (visível para os visitantes no modal)
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-sm font-bold text-[10px] uppercase tracking-widest text-white bg-[#1A1A1A] hover:bg-[#C5A059] transition-all shadow-sm cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar Comissão</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* List of Existing Coordinations */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-neutral-600" />
+                    <span>Comissões Cadastradas ({(data.coordinations || []).length})</span>
+                  </h4>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('Deseja restaurar as 3 comissões oficiais padrão da Cruzada de Milagres?')) {
+                        resetCoordinationsToDefaults();
+                        showNotification('Comissões padrão restauradas com sucesso.');
+                      }
+                    }}
+                    className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-black flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Restaurar Padrão da Cruzada</span>
+                  </button>
+                </div>
+
+                {(!data.coordinations || data.coordinations.length === 0) ? (
+                  <div className="text-center py-10 px-4 border border-dashed border-neutral-300 rounded-sm bg-neutral-50">
+                    <Users className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                    <p className="text-xs font-semibold text-neutral-700">Nenhuma comissão cadastrada</p>
+                    <p className="text-[11px] text-neutral-500 font-light mt-0.5">
+                      Use o formulário acima ou clique em &quot;Restaurar Padrão da Cruzada&quot;.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {data.coordinations.map((coord, idx) => {
+                      const isEditing = editingCoordId === coord.id;
+
+                      if (isEditing) {
+                        return (
+                          <div
+                            key={coord.id}
+                            className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 shadow-md"
+                          >
+                            <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#C5A059]">
+                                Editando Comissão #{idx + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingCoordId(null)}
+                                className="text-neutral-400 hover:text-white p-1"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                                  Nome da Comissão *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editCoordForm.name}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, name: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                                  Categoria / Área *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editCoordForm.category}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, category: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                                  Link do WhatsApp *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editCoordForm.whatsappLink}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, whatsappLink: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059] font-mono"
+                                />
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                                  Descrição
+                                </label>
+                                <textarea
+                                  rows={2}
+                                  value={editCoordForm.description}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, description: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                                  Líder ou Contacto
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editCoordForm.leaderOrContact}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, leaderOrContact: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-4">
+                                <input
+                                  type="checkbox"
+                                  id={`edit-active-${coord.id}`}
+                                  checked={editCoordForm.isActive}
+                                  onChange={(e) => setEditCoordForm({ ...editCoordForm, isActive: e.target.checked })}
+                                  className="rounded bg-neutral-800 text-[#C5A059] focus:ring-0 cursor-pointer"
+                                />
+                                <label htmlFor={`edit-active-${coord.id}`} className="text-xs text-neutral-300 cursor-pointer">
+                                  Activa e visível no modal
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-800">
+                              <button
+                                type="button"
+                                onClick={() => setEditingCoordId(null)}
+                                className="px-3 py-1.5 rounded-sm bg-neutral-800 text-neutral-300 text-xs hover:bg-neutral-700 cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!editCoordForm.name.trim()) return;
+                                  updateCoordination(coord.id, {
+                                    ...editCoordForm,
+                                    whatsappLink: resolveWhatsAppGroupLink(editCoordForm.whatsappLink),
+                                  });
+                                  setEditingCoordId(null);
+                                  showNotification('Comissão atualizada com sucesso!');
+                                }}
+                                className="px-4 py-1.5 rounded-sm bg-[#C5A059] text-neutral-950 font-bold text-xs hover:bg-[#D4AF37] cursor-pointer"
+                              >
+                                Salvar Alterações
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={coord.id}
+                          className={`p-4 rounded-sm border transition-all ${
+                            coord.isActive !== false
+                              ? 'bg-white border-neutral-200 hover:border-neutral-300'
+                              : 'bg-neutral-100/70 border-neutral-200 opacity-60'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {coord.category && (
+                                  <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-sm bg-[#C5A059]/15 text-[#8c6b24] border border-[#C5A059]/30">
+                                    {coord.category}
+                                  </span>
+                                )}
+                                {coord.isActive === false && (
+                                  <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-sm bg-neutral-200 text-neutral-600">
+                                    Inativa
+                                  </span>
+                                )}
+                              </div>
+                              <h5 className="text-xs sm:text-sm font-bold text-neutral-900 leading-snug">
+                                {coord.name}
+                              </h5>
+                              {coord.description && (
+                                <p className="text-xs text-neutral-600 font-light leading-relaxed">
+                                  {coord.description}
+                                </p>
+                              )}
+                              {coord.leaderOrContact && (
+                                <p className="text-[11px] text-neutral-500 font-light">
+                                  Responsável: <strong className="text-neutral-700 font-medium">{coord.leaderOrContact}</strong>
+                                </p>
+                              )}
+                              <div className="pt-1 flex items-center gap-2 text-[11px] font-mono text-neutral-500">
+                                <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span className="truncate max-w-md">{coord.whatsappLink}</span>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1.5 shrink-0 self-start">
+                              <a
+                                href={resolveWhatsAppGroupLink(coord.whatsappLink)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-sm text-emerald-700 hover:bg-emerald-50 border border-emerald-200 transition-colors"
+                                title="Testar link no WhatsApp"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCoordId(coord.id);
+                                  setEditCoordForm({
+                                    name: coord.name,
+                                    category: coord.category || '',
+                                    description: coord.description || '',
+                                    leaderOrContact: coord.leaderOrContact || '',
+                                    whatsappLink: coord.whatsappLink,
+                                    isActive: coord.isActive !== false,
+                                  });
+                                }}
+                                className="p-2 rounded-sm text-neutral-700 hover:bg-neutral-100 border border-neutral-200 transition-colors cursor-pointer"
+                                title="Editar Comissão"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Remover a comissão "${coord.name}"?`)) {
+                                    removeCoordination(coord.id);
+                                    showNotification('Comissão removida.');
+                                  }
+                                }}
+                                className="p-2 rounded-sm text-red-600 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer"
+                                title="Excluir Comissão"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

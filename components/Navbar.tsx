@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useChurch } from '@/lib/ChurchContext';
+import CoordinationsModal from '@/components/CoordinationsModal';
 import { 
   Church, 
   Menu, 
@@ -14,13 +15,15 @@ import {
   Share2, 
   PhoneCall, 
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 
 export function Navbar() {
   const { data, setIsAdminOpen } = useChurch();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCoordinationsOpen, setIsCoordinationsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -108,7 +111,7 @@ export function Navbar() {
         </nav>
 
         {/* Action Controls & Admin button */}
-        <div className="hidden sm:flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-2.5">
           <button
             id="navbar-admin-trigger"
             onClick={() => setIsAdminOpen(true)}
@@ -124,14 +127,25 @@ export function Navbar() {
             href={`https://wa.me/${data.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(data.whatsappMessage)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 text-[10px] uppercase tracking-widest font-bold text-white bg-[#1A1A1A] hover:bg-[#C5A059] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-widest font-bold text-white bg-[#1A1A1A] hover:bg-neutral-800 rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-sm"
           >
             <PhoneCall className="w-3.5 h-3.5" />
             <span>Falar Conosco</span>
           </a>
+
+          {/* BOTÃO COORDENAÇÕES (COMISSÕES DA CRUZADA NO WHATSAPP) */}
+          <button
+            id="navbar-coordinations-trigger"
+            onClick={() => setIsCoordinationsOpen(true)}
+            title="Acessar Grupos de WhatsApp das Coordenações e Comissões Oficiais"
+            className="flex items-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-widest font-bold text-neutral-950 bg-[#C5A059] hover:bg-[#b08e4d] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-sm ring-1 ring-[#C5A059]/30"
+          >
+            <Users className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Coordenações</span>
+          </button>
         </div>
 
-        {/* Mobile Hamburger Button */}
+        {/* Mobile Buttons */}
         <div className="flex items-center gap-2 lg:hidden">
           <button
             id="mobile-admin-btn-header"
@@ -172,11 +186,21 @@ export function Navbar() {
           </div>
 
           <div className="pt-4 mt-2 border-t border-neutral-100 flex flex-col gap-2">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsCoordinationsOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 w-full py-3 text-[11px] font-bold uppercase tracking-widest text-neutral-950 bg-[#C5A059] hover:bg-[#b08e4d] rounded-sm shadow-xs"
+            >
+              <Users className="w-4 h-4" />
+              <span>Ver Grupos das Coordenações</span>
+            </button>
             <a
               href={`https://wa.me/${data.whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(data.whatsappMessage)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 text-[11px] font-bold uppercase tracking-widest text-white bg-[#1A1A1A] hover:bg-[#C5A059] rounded-sm"
+              className="flex items-center justify-center gap-2 w-full py-3 text-[11px] font-bold uppercase tracking-widest text-white bg-[#1A1A1A] hover:bg-neutral-800 rounded-sm"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               <span>Entrar em Contacto no WhatsApp</span>
@@ -194,6 +218,12 @@ export function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Coordinations Modal Dialog */}
+      <CoordinationsModal
+        isOpen={isCoordinationsOpen}
+        onClose={() => setIsCoordinationsOpen(false)}
+      />
     </header>
   );
 }

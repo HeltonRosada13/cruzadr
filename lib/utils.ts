@@ -79,3 +79,42 @@ export function getYouTubeWatchUrl(url: string | undefined | null): string {
   }
   return url;
 }
+
+/**
+ * Resolves a WhatsApp link or group invite link directly as entered.
+ * Preserves the exact URL (e.g. chat.whatsapp.com/xxx) without defaulting to phone numbers.
+ */
+export function resolveWhatsAppGroupLink(rawLink: string | undefined | null): string {
+  if (!rawLink || typeof rawLink !== 'string') return '#';
+  const trimmed = rawLink.trim();
+  if (!trimmed) return '#';
+
+  // Already a full HTTP or HTTPS URL (e.g. https://chat.whatsapp.com/xxx)
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Missing protocol but starts with a known domain (e.g. chat.whatsapp.com/..., wa.me/...)
+  if (/^(chat\.whatsapp\.com|wa\.me|api\.whatsapp\.com|www\.)/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  // If it's an invite hash code like "AbC123XyZ..."
+  if (/^[A-Za-z0-9_-]{18,36}$/.test(trimmed)) {
+    return `https://chat.whatsapp.com/${trimmed}`;
+  }
+
+  // If it contains a slash and a dot (e.g., domain/path)
+  if (trimmed.includes('.') && trimmed.includes('/')) {
+    return `https://${trimmed}`;
+  }
+
+  // If it's strictly a phone number (e.g., +244 923 847 110 or 923847110)
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  if (digitsOnly.length >= 8 && (/^\+/.test(trimmed) || !trimmed.includes('.'))) {
+    return `https://wa.me/${digitsOnly}`;
+  }
+
+  return trimmed.startsWith('//') ? `https:${trimmed}` : `https://${trimmed}`;
+}
+
