@@ -137,6 +137,7 @@ function sanitizeSavedData(savedRaw: string | Record<string, any>): ChurchSettin
       churchName: parsed?.churchName || initialChurchData.churchName,
       logoPrefix: parsed?.logoPrefix !== undefined ? parsed.logoPrefix : initialChurchData.logoPrefix,
       logoSuffix: parsed?.logoSuffix !== undefined ? parsed.logoSuffix : initialChurchData.logoSuffix,
+      logoImageUrl: parsed?.logoImageUrl !== undefined ? parsed.logoImageUrl : initialChurchData.logoImageUrl,
       churchMotto: parsed?.churchMotto || initialChurchData.churchMotto,
       churchAbout: parsed?.churchAbout || initialChurchData.churchAbout,
       phone: parsed?.phone || initialChurchData.phone,

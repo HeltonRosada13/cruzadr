@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useChurch } from '@/lib/ChurchContext';
 import { 
   Church, 
@@ -52,15 +53,26 @@ export function Footer() {
           {/* Column 1: Church Identity & Slogan (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-sm bg-[#C5A059] flex items-center justify-center text-neutral-950 shadow-sm">
-                <Church className="w-4 h-4 text-neutral-950 stroke-[2.2]" />
+              <div className="w-9 h-9 rounded-sm bg-[#C5A059] flex items-center justify-center text-neutral-950 shadow-sm relative overflow-hidden shrink-0">
+                {data.logoImageUrl && data.logoImageUrl.trim() !== '' ? (
+                  <Image
+                    src={data.logoImageUrl}
+                    alt={data.churchName || 'Logo'}
+                    fill
+                    sizes="36px"
+                    className="object-contain p-0.5"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <Church className="w-4 h-4 text-neutral-950 stroke-[2.2]" />
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="text-[9px] uppercase tracking-[0.25em] text-[#C5A059] font-bold">
-                  Igreja
+                  {data.logoPrefix || 'Igreja'}
                 </span>
                 <span className="text-base font-editorial italic text-white tracking-tight">
-                  {data.churchName}
+                  {data.logoSuffix || data.churchName}
                 </span>
               </div>
             </div>

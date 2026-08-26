@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useChurch } from '@/lib/ChurchContext';
 import { 
   Church, 
@@ -68,8 +69,19 @@ export function Navbar() {
           id="navbar-logo-link"
           className="flex items-center gap-3 group text-left"
         >
-          <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] group-hover:bg-[#C5A059] flex items-center justify-center text-white transition-colors duration-300">
-            <Church className="w-4 h-4 text-white stroke-[2]" />
+          <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] group-hover:bg-[#C5A059] flex items-center justify-center text-white transition-colors duration-300 overflow-hidden relative shadow-xs shrink-0">
+            {data.logoImageUrl && data.logoImageUrl.trim() !== '' ? (
+              <Image
+                src={data.logoImageUrl}
+                alt={data.logoSuffix || 'Logo da Igreja'}
+                fill
+                sizes="36px"
+                className="object-contain p-0.5"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Church className="w-4 h-4 text-white stroke-[2]" />
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">

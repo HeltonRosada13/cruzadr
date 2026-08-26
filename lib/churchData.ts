@@ -4,6 +4,7 @@ export const initialChurchData: ChurchSettings = {
   churchName: 'Cruzada de Curas e Milagres, Dunamis Angola',
   logoPrefix: 'Catedral de',
   logoSuffix: 'Amor e Fé',
+  logoImageUrl: '',
   churchMotto: 'Um lugar de fé, amor, comunhão e transformação.',
   churchAbout:
     'A Catedral de Amor e Fé é uma comunidade cristã viva, contemporânea e acolhedora, dedicada a proclamar o Evangelho de Jesus Cristo, transformar vidas através da Palavra e manifestar o amor prático em nossa sociedade.',

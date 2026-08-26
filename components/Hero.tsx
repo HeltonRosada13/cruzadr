@@ -461,7 +461,7 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Visitor Action Buttons: SABER MAIS, ASSISTIR NO YOUTUBE & GALERIA */}
+        {/* Visitor Action Buttons: SABER MAIS & GALERIA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-10">
           <button
             id="hero-btn-saber-mais"
@@ -470,15 +470,6 @@ export function Hero() {
           >
             <span>Saber Mais</span>
             <ArrowDown className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            id="hero-btn-assistir-youtube"
-            onClick={() => setIsVideoModalOpen(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 rounded-sm shadow-xl transition-all transform hover:-translate-y-0.5 cursor-pointer ring-2 ring-red-500/30"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Assistir no YouTube</span>
           </button>
 
           <button

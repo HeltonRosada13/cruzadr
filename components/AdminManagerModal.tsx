@@ -132,6 +132,7 @@ function AdminManagerModalInner() {
   const photoFileInputRef = useRef<HTMLInputElement>(null);
   const photoBatchFileInputRef = useRef<HTMLInputElement>(null);
   const heroImageFileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const videoThumbFileInputRef = useRef<HTMLInputElement>(null);
   const eventImageFileInputRef = useRef<HTMLInputElement>(null);
   const editEventImageFileInputRef = useRef<HTMLInputElement>(null);
@@ -141,6 +142,7 @@ function AdminManagerModalInner() {
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isBatchPhotoUploading, setIsBatchPhotoUploading] = useState(false);
   const [isHeroImageUploading, setIsHeroImageUploading] = useState(false);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
   const [isVideoThumbUploading, setIsVideoThumbUploading] = useState(false);
   const [isEventImageUploading, setIsEventImageUploading] = useState(false);
   const [isEditEventImageUploading, setIsEditEventImageUploading] = useState(false);
@@ -159,6 +161,7 @@ function AdminManagerModalInner() {
     churchName: data.churchName,
     logoPrefix: data.logoPrefix || 'Catedral de',
     logoSuffix: data.logoSuffix || 'Amor e Fé',
+    logoImageUrl: data.logoImageUrl || '',
     churchMotto: data.churchMotto,
     churchAbout: data.churchAbout || '',
     phone: data.phone,
@@ -313,6 +316,25 @@ function AdminManagerModalInner() {
       showNotification('Erro ao carregar imagem de capa.');
     } finally {
       setIsHeroImageUploading(false);
+    }
+  };
+
+  // Handler for Church Logo Image File
+  const handleProcessLogoFile = async (file: File) => {
+    if (!file) return;
+    try {
+      setIsLogoUploading(true);
+      const result = await processAndOptimizeImage(file, 400, 400, 0.9);
+      setChurchForm((prev) => ({
+        ...prev,
+        logoImageUrl: result.dataUrl,
+      }));
+      showNotification(`Logotipo da igreja carregado com sucesso (${result.formattedSize})!`);
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+      showNotification('Erro ao carregar ficheiro de logotipo.');
+    } finally {
+      setIsLogoUploading(false);
     }
   };
 
@@ -1109,33 +1131,69 @@ function AdminManagerModalInner() {
                 </div>
               </div>
 
+              {/* SEÇÃO DEDICADA: TÍTULO PRINCIPAL E SUBTÍTULO DO HERO */}
+              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                    <label className="text-xs font-bold uppercase tracking-widest text-white">
+                      Título Principal & Subtítulo do Hero (Destaque Central)
+                    </label>
+                  </div>
+                  <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
+                    Centro do Hero
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
+                  Edite o título de grande impacto e o subtítulo descritivo exibidos no centro do Hero da página inicial.
+                </p>
+
+                {/* Live Preview of Title and Subtitle */}
+                <div className="p-4 bg-black/80 rounded-sm border border-neutral-800 text-center space-y-2">
+                  <h2 className="text-white text-xl sm:text-2xl font-editorial italic font-normal tracking-tight leading-tight max-w-xl mx-auto drop-shadow-md">
+                    {activityForm.name || 'GRANDE CONFERÊNCIA RENOVO'}
+                  </h2>
+                  <p className="text-neutral-300 text-xs font-light max-w-md mx-auto leading-relaxed truncate">
+                    {activityForm.subtitle || 'Um momento de fé, comunhão, transformação e celebração.'}
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Título Principal da Atividade / Conferência *
+                    </label>
+                    <input
+                      type="text"
+                      value={activityForm.name}
+                      onChange={(e) => setActivityForm({ ...activityForm, name: e.target.value })}
+                      placeholder="Ex: GRANDE CONFERÊNCIA RENOVO ou CRUZADA DE CURAS E MILAGRES"
+                      className="w-full px-3 py-2.5 rounded-sm bg-neutral-800 border border-neutral-600 text-sm text-white focus:outline-none focus:border-[#C5A059] font-serif"
+                      required
+                    />
+                    <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                      Exibido em fonte editorial itálica e grande formato no topo da página.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Subtítulo / Frase de Impacto *
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={activityForm.subtitle}
+                      onChange={(e) => setActivityForm({ ...activityForm, subtitle: e.target.value })}
+                      placeholder="Ex: Um momento de fé, comunhão, transformação e celebração."
+                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
-                    Nome da Atividade
-                  </label>
-                  <input
-                    type="text"
-                    value={activityForm.name}
-                    onChange={(e) => setActivityForm({ ...activityForm, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
-                    Subtítulo do Hero
-                  </label>
-                  <input
-                    type="text"
-                    value={activityForm.subtitle}
-                    onChange={(e) => setActivityForm({ ...activityForm, subtitle: e.target.value })}
-                    className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
-                    required
-                  />
-                </div>
-
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
                     Data e Hora para a Contagem Regressiva (ISO Formato)
@@ -3504,7 +3562,7 @@ function AdminManagerModalInner() {
           {activeTab === 'church' && (
             <form onSubmit={handleSaveChurchInfo} className="space-y-5">
               {/* SEÇÃO DEDICADA: LOGOTIPO & CABEÇALHO */}
-              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 shadow-sm">
+              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Church className="w-4 h-4 text-[#C5A059]" />
@@ -3513,19 +3571,30 @@ function AdminManagerModalInner() {
                     </label>
                   </div>
                   <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
-                    Topo do Site
+                    Topo do Site (Navbar)
                   </span>
                 </div>
 
                 <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
-                  Configure o texto exibido no logotipo do canto superior esquerdo da barra de navegação (Navbar).
+                  Personalize o logotipo, o ícone/imagem e os textos que aparecem no canto superior esquerdo da barra de navegação.
                 </p>
 
                 {/* Live Preview of Header Logo */}
-                <div className="p-4 bg-white rounded-sm border border-neutral-300 flex items-center justify-between">
+                <div className="p-4 bg-white rounded-sm border border-neutral-300 flex items-center justify-between shadow-xs">
                   <div className="flex items-center gap-3 text-left">
-                    <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] flex items-center justify-center text-white shadow-xs">
-                      <Church className="w-4 h-4 text-white stroke-[2]" />
+                    <div className="w-10 h-10 rounded-sm bg-[#1A1A1A] flex items-center justify-center text-white shadow-xs relative overflow-hidden shrink-0">
+                      {churchForm.logoImageUrl && churchForm.logoImageUrl.trim() !== '' ? (
+                        <Image
+                          src={churchForm.logoImageUrl}
+                          alt="Logo Preview"
+                          fill
+                          sizes="40px"
+                          className="object-contain p-0.5"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <Church className="w-5 h-5 text-white stroke-[2]" />
+                      )}
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
@@ -3536,9 +3605,77 @@ function AdminManagerModalInner() {
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-sm bg-neutral-50 hidden sm:inline-block">
-                    Pré-visualização do Cabeçalho
-                  </span>
+                  <div className="hidden sm:flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 border border-neutral-200 px-2.5 py-1 rounded-sm bg-neutral-50">
+                      Pré-visualização do Topo
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hidden File Input for Church Logo */}
+                <input
+                  type="file"
+                  ref={logoFileInputRef}
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleProcessLogoFile(file);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+
+                {/* Upload & Image Controls */}
+                <div className="p-3 bg-neutral-800/80 rounded-sm border border-neutral-700 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#C5A059] flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      Ícone ou Imagem do Logotipo
+                    </label>
+                    {churchForm.logoImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setChurchForm({ ...churchForm, logoImageUrl: '' })}
+                        className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1 underline cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Usar Ícone Padrão
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                    <div className="sm:col-span-5">
+                      <button
+                        type="button"
+                        onClick={() => logoFileInputRef.current?.click()}
+                        disabled={isLogoUploading}
+                        className="w-full h-9 px-3 rounded-sm bg-[#C5A059] hover:bg-[#b08e4d] text-neutral-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                      >
+                        {isLogoUploading ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            A Carregar Imagem...
+                          </>
+                        ) : (
+                          <>
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            Carregar Imagem de Logo
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="sm:col-span-7">
+                      <input
+                        type="url"
+                        value={churchForm.logoImageUrl || ''}
+                        onChange={(e) => setChurchForm({ ...churchForm, logoImageUrl: e.target.value })}
+                        placeholder="Ou cole a URL da imagem do logotipo (PNG/JPG)..."
+                        className="w-full h-9 px-3 rounded-sm bg-neutral-900 border border-neutral-700 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#C5A059]"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">

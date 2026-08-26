@@ -90,6 +90,7 @@ export interface ChurchSettings {
   churchName: string;
   logoPrefix?: string;
   logoSuffix?: string;
+  logoImageUrl?: string;
   churchMotto: string;
   churchAbout: string;
   phone: string;
