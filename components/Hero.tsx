@@ -426,7 +426,7 @@ export function Hero() {
         {/* Eyebrow in Editorial Typography */}
         <span className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-          <span>{activity.badge || 'EVENTO PRINCIPAL'} — IGREJA CATEDRAL DE AMOR E FÉ</span>
+          <span>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ')}</span>
         </span>
 
         {/* Activity Main Title in Editorial Serif */}

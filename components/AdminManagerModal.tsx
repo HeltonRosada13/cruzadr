@@ -21,6 +21,7 @@ import {
   Share2, 
   Phone, 
   Info,
+  Church,
   CheckCircle2,
   Sparkles,
   Star,
@@ -149,10 +150,17 @@ function AdminManagerModalInner() {
   const [uploadedPhotoMeta, setUploadedPhotoMeta] = useState<{ name: string; size: string } | null>(null);
 
   // Form states initialized directly from current church data
-  const [activityForm, setActivityForm] = useState(data.currentActivity);
+  const [activityForm, setActivityForm] = useState({
+    ...data.currentActivity,
+    badge: data.currentActivity?.badge || 'Evento Especial do Ano',
+    heroEyebrow: data.currentActivity?.heroEyebrow || 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ',
+  });
   const [churchForm, setChurchForm] = useState({
     churchName: data.churchName,
+    logoPrefix: data.logoPrefix || 'Catedral de',
+    logoSuffix: data.logoSuffix || 'Amor e Fé',
     churchMotto: data.churchMotto,
+    churchAbout: data.churchAbout || '',
     phone: data.phone,
     whatsappNumber: data.whatsappNumber,
     whatsappMessage: data.whatsappMessage,
@@ -1042,6 +1050,63 @@ function AdminManagerModalInner() {
             <form onSubmit={handleSaveActivity} className="space-y-4">
               <div className="p-3.5 rounded-sm bg-[#C5A059]/10 border border-[#C5A059]/20 text-xs text-neutral-800 mb-4 font-light">
                 Edite os dados que aparecem no Hero e na seção &quot;Sobre a Atividade&quot;. As alterações afetam imediatamente a contagem regressiva e os destaques.
+              </div>
+
+              {/* SEÇÃO DEDICADA: FAIXA / TEXTO DE DESTAQUE SUPERIOR DO HERO */}
+              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                    <label className="text-xs font-bold uppercase tracking-widest text-white">
+                      Texto em Destaque no Topo do Hero (Faixa Dourada / Eyebrow)
+                    </label>
+                  </div>
+                  <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
+                    Cabeçalho Principal
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
+                  Este é o texto exibido em letras maiúsculas douradas logo acima do título principal no Hero do site.
+                </p>
+
+                {/* Live Preview of the Golden Eyebrow Badge */}
+                <div className="p-3 bg-black/60 rounded-sm border border-neutral-800 flex items-center justify-center text-center">
+                  <span className="text-[#C5A059] text-[11px] sm:text-xs font-bold tracking-[0.3em] uppercase flex items-center gap-2 drop-shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                    <span className="truncate">
+                      {activityForm.heroEyebrow || 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ'}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div className="md:col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Texto Completo da Faixa do Hero *
+                    </label>
+                    <input
+                      type="text"
+                      value={activityForm.heroEyebrow || ''}
+                      onChange={(e) => setActivityForm({ ...activityForm, heroEyebrow: e.target.value })}
+                      placeholder="Ex: EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ"
+                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059] font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Etiqueta / Badge Curto
+                    </label>
+                    <input
+                      type="text"
+                      value={activityForm.badge || ''}
+                      onChange={(e) => setActivityForm({ ...activityForm, badge: e.target.value })}
+                      placeholder="Ex: Evento Especial do Ano"
+                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3437,11 +3502,84 @@ function AdminManagerModalInner() {
 
           {/* TAB 6: DADOS DA IGREJA & WHATSAPP */}
           {activeTab === 'church' && (
-            <form onSubmit={handleSaveChurchInfo} className="space-y-4">
+            <form onSubmit={handleSaveChurchInfo} className="space-y-5">
+              {/* SEÇÃO DEDICADA: LOGOTIPO & CABEÇALHO */}
+              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Church className="w-4 h-4 text-[#C5A059]" />
+                    <label className="text-xs font-bold uppercase tracking-widest text-white">
+                      Identidade Visual do Cabeçalho & Logotipo (Barra Superior)
+                    </label>
+                  </div>
+                  <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
+                    Topo do Site
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
+                  Configure o texto exibido no logotipo do canto superior esquerdo da barra de navegação (Navbar).
+                </p>
+
+                {/* Live Preview of Header Logo */}
+                <div className="p-4 bg-white rounded-sm border border-neutral-300 flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] flex items-center justify-center text-white shadow-xs">
+                      <Church className="w-4 h-4 text-white stroke-[2]" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
+                        {churchForm.logoPrefix || 'Catedral de'}
+                      </span>
+                      <span className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900">
+                        {churchForm.logoSuffix || 'Amor e Fé'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-sm bg-neutral-50 hidden sm:inline-block">
+                    Pré-visualização do Cabeçalho
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Prefixo do Logotipo (Texto Superior Menor) *
+                    </label>
+                    <input
+                      type="text"
+                      value={churchForm.logoPrefix || ''}
+                      onChange={(e) => setChurchForm({ ...churchForm, logoPrefix: e.target.value })}
+                      placeholder="Ex: Catedral de ou Igreja"
+                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
+                    />
+                    <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                      Texto menor com espaçamento largo acima do nome principal
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
+                      Nome Principal do Logotipo (Texto em Destaque) *
+                    </label>
+                    <input
+                      type="text"
+                      value={churchForm.logoSuffix || ''}
+                      onChange={(e) => setChurchForm({ ...churchForm, logoSuffix: e.target.value })}
+                      placeholder="Ex: Amor e Fé ou Dunamis Angola"
+                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059] font-bold"
+                    />
+                    <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                      Texto principal em destaque negrito
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
-                    Nome Oficial da Igreja
+                    Nome Oficial Completo da Igreja
                   </label>
                   <input
                     type="text"
@@ -3483,6 +3621,19 @@ function AdminManagerModalInner() {
                     type="email"
                     value={churchForm.email}
                     onChange={(e) => setChurchForm({ ...churchForm, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:border-black"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                    Sobre a Igreja / Comunidade
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={churchForm.churchAbout || ''}
+                    onChange={(e) => setChurchForm({ ...churchForm, churchAbout: e.target.value })}
+                    placeholder="Descrição institucional exibida no rodapé e sobre a igreja..."
                     className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:border-black"
                   />
                 </div>

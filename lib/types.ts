@@ -16,6 +16,7 @@ export interface ChurchActivity {
   heroVideo?: string;
   videoPromoUrl?: string;
   badge?: string;
+  heroEyebrow?: string;
   status: 'upcoming' | 'ongoing' | 'completed';
 }
 
@@ -87,6 +88,8 @@ export interface Testimony {
 
 export interface ChurchSettings {
   churchName: string;
+  logoPrefix?: string;
+  logoSuffix?: string;
   churchMotto: string;
   churchAbout: string;
   phone: string;
