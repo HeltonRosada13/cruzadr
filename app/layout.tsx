@@ -1,5 +1,19 @@
 import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans, Newsreader } from 'next/font/google';
 import './globals.css'; // Global styles
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-editorial',
+  display: 'swap',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -29,8 +43,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="pt" className="scroll-smooth">
-      <body suppressHydrationWarning className="bg-neutral-900 text-neutral-100 antialiased min-h-screen selection:bg-[#C5A059] selection:text-white">
+    <html lang="pt" className={`scroll-smooth ${plusJakarta.variable} ${newsreader.variable}`}>
+      <body suppressHydrationWarning className="bg-[#FDFDFC] text-[#1A1A1A] antialiased min-h-screen selection:bg-[#C5A059] selection:text-white">
         {children}
       </body>
     </html>

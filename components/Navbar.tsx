@@ -39,6 +39,7 @@ export function Navbar() {
     { label: 'Atividades', href: '#atividades' },
     { label: 'Galeria', href: '#fotos' },
     { label: 'Vídeos', href: '#videos' },
+    { label: 'Testemunhos', href: '#testemunhos' },
     { label: 'Redes', href: '#redes-sociais' },
     { label: 'Contacto', href: '#contacto' },
   ];

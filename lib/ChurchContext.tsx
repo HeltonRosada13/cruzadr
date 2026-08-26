@@ -33,7 +33,10 @@ interface ChurchContextType {
   updateHighlight: (id: string, updated: Partial<HighlightMoment>) => void;
   removeHighlight: (id: string) => void;
   resetHighlightsToDefaults: () => void;
+  addTestimony: (testimony: Omit<Testimony, 'id'>) => void;
   updateTestimony: (id: string, updated: Partial<Testimony>) => void;
+  removeTestimony: (id: string) => void;
+  resetTestimoniesToDefaults: () => void;
   updateWorshipScheduleItem: (index: number, updated: { day: string; time: string; name: string }) => void;
   addWorshipScheduleItem: (item: { day: string; time: string; name: string }) => void;
   removeWorshipScheduleItem: (index: number) => void;
@@ -734,12 +737,37 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     }), true);
   }, [updateStore]);
 
+  const addTestimony = useCallback((testimonyData: Omit<Testimony, 'id'>) => {
+    const newTestimony: Testimony = {
+      ...testimonyData,
+      id: 'test-' + Date.now(),
+    };
+    updateStore((prev) => ({
+      ...prev,
+      testimonies: [newTestimony, ...(prev.testimonies || [])],
+    }), true);
+  }, [updateStore]);
+
   const updateTestimony = useCallback((id: string, updated: Partial<Testimony>) => {
     updateStore((prev) => ({
       ...prev,
-      testimonies: prev.testimonies.map((item) =>
+      testimonies: (prev.testimonies || []).map((item) =>
         item.id === id ? { ...item, ...updated } : item
       ),
+    }), true);
+  }, [updateStore]);
+
+  const removeTestimony = useCallback((id: string) => {
+    updateStore((prev) => ({
+      ...prev,
+      testimonies: (prev.testimonies || []).filter((item) => item.id !== id),
+    }), true);
+  }, [updateStore]);
+
+  const resetTestimoniesToDefaults = useCallback(() => {
+    updateStore((prev) => ({
+      ...prev,
+      testimonies: initialChurchData.testimonies,
     }), true);
   }, [updateStore]);
 
@@ -806,7 +834,10 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         updateHighlight,
         removeHighlight,
         resetHighlightsToDefaults,
+        addTestimony,
         updateTestimony,
+        removeTestimony,
+        resetTestimoniesToDefaults,
         updateWorshipScheduleItem,
         addWorshipScheduleItem,
         removeWorshipScheduleItem,

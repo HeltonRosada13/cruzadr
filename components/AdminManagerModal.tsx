@@ -1,8 +1,8 @@
-'use client';
+ 'use client';
 
 import React, { useState, useRef } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
-import { PhotoItem, ChurchEvent } from '@/lib/types';
+import { PhotoItem, ChurchEvent, Testimony } from '@/lib/types';
 import { saveHeroVideoBlob, clearHeroVideoBlob, saveVideoFileBlob, generateVideoThumbnailAndDuration } from '@/lib/videoStorage';
 import { processAndOptimizeImage } from '@/lib/imageUtils';
 import { AdminHighlightsTab } from '@/components/AdminHighlightsTab';
@@ -52,7 +52,9 @@ import {
   Lock,
   KeyRound,
   ShieldCheck,
-  LogOut
+  LogOut,
+  Quote,
+  MessageSquareHeart
 } from 'lucide-react';
 
 export function AdminManagerModal() {
@@ -94,6 +96,10 @@ function AdminManagerModalInner() {
     updateHighlight,
     removeHighlight,
     resetHighlightsToDefaults,
+    addTestimony,
+    updateTestimony,
+    removeTestimony,
+    resetTestimoniesToDefaults,
     syncNowWithCloud,
     syncState,
     firebaseProjectId,
@@ -101,7 +107,7 @@ function AdminManagerModalInner() {
     firebaseConsoleUrl
   } = useChurch();
 
-  const [activeTab, setActiveTab] = useState<'activity' | 'highlights' | 'photos' | 'videos' | 'social' | 'church' | 'events' | 'cloud'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'highlights' | 'photos' | 'videos' | 'events' | 'testimonies' | 'social' | 'church' | 'cloud'>('activity');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Video Upload States
@@ -128,6 +134,8 @@ function AdminManagerModalInner() {
   const videoThumbFileInputRef = useRef<HTMLInputElement>(null);
   const eventImageFileInputRef = useRef<HTMLInputElement>(null);
   const editEventImageFileInputRef = useRef<HTMLInputElement>(null);
+  const testimonyAvatarFileInputRef = useRef<HTMLInputElement>(null);
+  const editTestimonyAvatarFileInputRef = useRef<HTMLInputElement>(null);
 
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isBatchPhotoUploading, setIsBatchPhotoUploading] = useState(false);
@@ -135,6 +143,8 @@ function AdminManagerModalInner() {
   const [isVideoThumbUploading, setIsVideoThumbUploading] = useState(false);
   const [isEventImageUploading, setIsEventImageUploading] = useState(false);
   const [isEditEventImageUploading, setIsEditEventImageUploading] = useState(false);
+  const [isTestimonyAvatarUploading, setIsTestimonyAvatarUploading] = useState(false);
+  const [isEditTestimonyAvatarUploading, setIsEditTestimonyAvatarUploading] = useState(false);
   const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
   const [uploadedPhotoMeta, setUploadedPhotoMeta] = useState<{ name: string; size: string } | null>(null);
 
@@ -189,6 +199,19 @@ function AdminManagerModalInner() {
   // Edit event state
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [editingEventForm, setEditingEventForm] = useState<ChurchEvent | null>(null);
+
+  // Testimony input & edit states
+  const [newTestimony, setNewTestimony] = useState({
+    name: '',
+    role: 'Membro da Catedral',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
+    content: '',
+    activityName: data.currentActivity?.name || 'Culto da Família',
+    date: 'Agosto de 2026',
+  });
+
+  const [editingTestimonyId, setEditingTestimonyId] = useState<string | null>(null);
+  const [editingTestimonyForm, setEditingTestimonyForm] = useState<Testimony | null>(null);
 
   const showNotification = (msg: string) => {
     setSuccessMsg(msg);
@@ -672,6 +695,83 @@ function AdminManagerModalInner() {
     setEditingEventForm(null);
   };
 
+  // Handlers for Testimonies (Upload Avatar, Create, Edit, Delete)
+  const handleProcessTestimonyAvatarFile = async (file: File, isEditMode = false) => {
+    if (!file) return;
+    try {
+      if (isEditMode) {
+        setIsEditTestimonyAvatarUploading(true);
+      } else {
+        setIsTestimonyAvatarUploading(true);
+      }
+      const result = await processAndOptimizeImage(file, 400, 400, 0.85);
+      if (isEditMode) {
+        setEditingTestimonyForm((prev) => prev ? { ...prev, avatarUrl: result.dataUrl } : null);
+      } else {
+        setNewTestimony((prev) => ({ ...prev, avatarUrl: result.dataUrl }));
+      }
+      showNotification(`Foto de ${file.name} carregada e otimizada com sucesso!`);
+    } catch (err) {
+      console.error('Error uploading testimony photo:', err);
+      showNotification('Erro ao carregar a foto. Verifique se é uma imagem válida.');
+    } finally {
+      setIsTestimonyAvatarUploading(false);
+      setIsEditTestimonyAvatarUploading(false);
+    }
+  };
+
+  const handleAddTestimonySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTestimony.name.trim() || !newTestimony.content.trim()) {
+      showNotification('Por favor, preencha o nome da pessoa e o texto do testemunho.');
+      return;
+    }
+
+    addTestimony({
+      name: newTestimony.name.trim(),
+      role: newTestimony.role.trim() || 'Membro da Igreja',
+      avatarUrl: newTestimony.avatarUrl.trim() || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
+      content: newTestimony.content.trim(),
+      activityName: newTestimony.activityName.trim() || data.currentActivity?.name || 'Culto da Catedral',
+      date: newTestimony.date.trim() || 'Agosto de 2026',
+    });
+
+    setNewTestimony({
+      name: '',
+      role: 'Membro da Catedral',
+      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
+      content: '',
+      activityName: data.currentActivity?.name || 'Culto da Família',
+      date: 'Agosto de 2026',
+    });
+
+    showNotification('Testemunho publicado e salvo permanentemente!');
+  };
+
+  const handleStartEditTestimony = (testimony: Testimony) => {
+    setEditingTestimonyId(testimony.id);
+    setEditingTestimonyForm({ ...testimony });
+  };
+
+  const handleCancelEditTestimony = () => {
+    setEditingTestimonyId(null);
+    setEditingTestimonyForm(null);
+  };
+
+  const handleSaveEditedTestimony = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTestimonyId || !editingTestimonyForm) return;
+    if (!editingTestimonyForm.name.trim() || !editingTestimonyForm.content.trim()) {
+      showNotification('Por favor, preencha o nome e o testemunho.');
+      return;
+    }
+
+    updateTestimony(editingTestimonyId, editingTestimonyForm);
+    showNotification(`Testemunho de "${editingTestimonyForm.name}" atualizado com sucesso!`);
+    setEditingTestimonyId(null);
+    setEditingTestimonyForm(null);
+  };
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordInput.trim() === 'CAF2026') {
@@ -912,6 +1012,7 @@ function AdminManagerModalInner() {
             { id: 'photos', label: `Fotos (${data.photos.length})`, icon: ImageIcon },
             { id: 'videos', label: `Vídeos (${data.videos.length})`, icon: Video },
             { id: 'events', label: `Próximas Atividades (${data.upcomingEvents.length})`, icon: Calendar },
+            { id: 'testimonies', label: `Testemunhos (${data.testimonies?.length || 0})`, icon: MessageSquareHeart },
             { id: 'social', label: 'Redes Sociais & Links', icon: Share2 },
             { id: 'church', label: 'Igreja & Contactos', icon: Phone },
             { id: 'cloud', label: 'Nuvem & Vercel', icon: Globe },
@@ -2606,6 +2707,408 @@ function AdminManagerModalInner() {
                               title="Remover Atividade"
                             >
                               <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: TESTEMUNHOS */}
+          {activeTab === 'testimonies' && (
+            <div className="space-y-6">
+              <div className="p-3.5 rounded-sm bg-[#C5A059]/10 border border-[#C5A059]/20 text-xs text-neutral-800 font-light flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold text-neutral-900 mb-0.5">Gestão de Testemunhos & Relatos de Fé</h4>
+                  <p className="text-[11px] text-neutral-600">
+                    Cadastre a foto das pessoas que testemunham, seu nome, função na igreja e o relato completo do que Deus fez em suas vidas. Todos os testemunhos aparecem na seção oficial &quot;Vozes de Transformação&quot;.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetTestimoniesToDefaults();
+                    showNotification('Testemunhos restaurados para as versões padrão.');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white hover:bg-neutral-100 text-neutral-700 text-[10px] font-bold uppercase tracking-wider border border-neutral-300 transition-colors whitespace-nowrap self-start sm:self-auto cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Restaurar Padrão</span>
+                </button>
+              </div>
+
+              {/* FORMULÁRIO DE CADASTRO DE NOVO TESTEMUNHO */}
+              <form onSubmit={handleAddTestimonySubmit} className="p-5 rounded-sm bg-neutral-50/70 border border-neutral-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900 flex items-center gap-2">
+                    <Quote className="w-4 h-4 text-[#C5A059]" />
+                    <span>Adicionar Novo Testemunho</span>
+                  </h4>
+                  <span className="text-[10px] text-neutral-500 font-mono">
+                    {data.testimonies?.length || 0} Testemunhos Cadastrados
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Nome da Pessoa que Testemunha *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Irmã Maria Domingos"
+                      value={newTestimony.name}
+                      onChange={(e) => setNewTestimony({ ...newTestimony, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Cargo / Função na Igreja
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Membro da Catedral / Visitante"
+                      value={newTestimony.role}
+                      onChange={(e) => setNewTestimony({ ...newTestimony, role: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Culto / Atividade Relacionada
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Culto de Cura e Libertação"
+                      value={newTestimony.activityName}
+                      onChange={(e) => setNewTestimony({ ...newTestimony, activityName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Data / Mês do Relato
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Agosto de 2026"
+                      value={newTestimony.date}
+                      onChange={(e) => setNewTestimony({ ...newTestimony, date: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                    />
+                  </div>
+
+                  {/* UPLOAD DA FOTO DA PESSOA */}
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Foto da Pessoa que Testemunha
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      {newTestimony.avatarUrl ? (
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden border border-neutral-300 shrink-0 bg-neutral-200">
+                          <Image
+                            src={newTestimony.avatarUrl}
+                            alt="Prévia do Avatar"
+                            fill
+                            className="object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-neutral-200 border border-neutral-300 flex items-center justify-center text-neutral-400 shrink-0">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 w-full space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            ref={testimonyAvatarFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleProcessTestimonyAvatarFile(f, false);
+                            }}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => testimonyAvatarFileInputRef.current?.click()}
+                            disabled={isTestimonyAvatarUploading}
+                            className="px-3 py-1.5 rounded-sm bg-[#1A1A1A] hover:bg-[#C5A059] text-white text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>{isTestimonyAvatarUploading ? 'A Carregar Foto...' : 'Carregar Foto da Pessoa'}</span>
+                          </button>
+                          <span className="text-[10px] text-neutral-400">ou cole a URL abaixo:</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          value={newTestimony.avatarUrl}
+                          onChange={(e) => setNewTestimony({ ...newTestimony, avatarUrl: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black font-mono text-[11px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÁREA DE ESCREVER TESTEMUNHO */}
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                      Texto do Testemunho / Relato da Transformação *
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Escreva aqui o testemunho completo da pessoa: o que aconteceu, a oração realizada e a bênção alcançada..."
+                      value={newTestimony.content}
+                      onChange={(e) => setNewTestimony({ ...newTestimony, content: e.target.value })}
+                      className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black resize-y"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#1A1A1A] hover:bg-[#C5A059] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all cursor-pointer shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Publicar Testemunho no Site</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* LISTA DE TESTEMUNHOS CADASTRADOS */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
+                    Testemunhos Publicados ({data.testimonies?.length || 0})
+                  </h4>
+                </div>
+
+                {(!data.testimonies || data.testimonies.length === 0) ? (
+                  <div className="p-8 text-center bg-neutral-50 rounded-sm border border-dashed border-neutral-300 text-neutral-500 text-xs">
+                    Nenhum testemunho cadastrado no momento. Preencha o formulário acima para adicionar o primeiro relato!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {data.testimonies.map((testimony) => {
+                      const isEditing = editingTestimonyId === testimony.id;
+
+                      if (isEditing && editingTestimonyForm) {
+                        return (
+                          <form
+                            key={testimony.id}
+                            onSubmit={handleSaveEditedTestimony}
+                            className="p-4 rounded-sm bg-[#FDFDFC] border-2 border-[#C5A059] shadow-md space-y-3 md:col-span-2 animate-in fade-in"
+                          >
+                            <div className="flex items-center justify-between pb-2 border-b border-[#C5A059]/30">
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#C5A059] flex items-center gap-1.5">
+                                <Pencil className="w-3.5 h-3.5" />
+                                A Editar Testemunho: {testimony.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditTestimony}
+                                className="text-[10px] text-neutral-500 hover:text-black font-semibold"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                  Nome *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editingTestimonyForm.name}
+                                  onChange={(e) => setEditingTestimonyForm({ ...editingTestimonyForm, name: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                  Função / Cargo
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editingTestimonyForm.role}
+                                  onChange={(e) => setEditingTestimonyForm({ ...editingTestimonyForm, role: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                  Culto / Atividade
+                                </label>
+                                <input
+                                  type="text"
+                                  value={editingTestimonyForm.activityName || ''}
+                                  onChange={(e) => setEditingTestimonyForm({ ...editingTestimonyForm, activityName: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
+                                />
+                              </div>
+
+                              {/* Foto na Edição */}
+                              <div className="sm:col-span-3">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                  Foto da Pessoa
+                                </label>
+                                <div className="flex items-center gap-3">
+                                  {editingTestimonyForm.avatarUrl ? (
+                                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-neutral-300 shrink-0">
+                                      <Image
+                                        src={editingTestimonyForm.avatarUrl}
+                                        alt="Avatar"
+                                        fill
+                                        className="object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
+                                  ) : null}
+                                  <input
+                                    ref={editTestimonyAvatarFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleProcessTestimonyAvatarFile(f, true);
+                                    }}
+                                    className="hidden"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => editTestimonyAvatarFileInputRef.current?.click()}
+                                    disabled={isEditTestimonyAvatarUploading}
+                                    className="px-2.5 py-1 rounded-sm bg-neutral-800 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider transition-colors shrink-0 cursor-pointer"
+                                  >
+                                    <Camera className="w-3 h-3 inline mr-1" />
+                                    <span>{isEditTestimonyAvatarUploading ? 'A Carregar...' : 'Trocar Foto'}</span>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    value={editingTestimonyForm.avatarUrl}
+                                    onChange={(e) => setEditingTestimonyForm({ ...editingTestimonyForm, avatarUrl: e.target.value })}
+                                    className="flex-1 px-2.5 py-1 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black font-mono text-[11px]"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="sm:col-span-3">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                  Texto do Testemunho *
+                                </label>
+                                <textarea
+                                  rows={3}
+                                  value={editingTestimonyForm.content}
+                                  onChange={(e) => setEditingTestimonyForm({ ...editingTestimonyForm, content: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black resize-y"
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200">
+                              <button
+                                type="button"
+                                onClick={handleCancelEditTestimony}
+                                className="px-3 py-1.5 rounded-sm border border-neutral-300 text-[10px] font-bold uppercase tracking-wider text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="submit"
+                                className="px-4 py-1.5 rounded-sm bg-[#C5A059] hover:bg-[#A9833D] text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                              >
+                                Salvar Alterações
+                              </button>
+                            </div>
+                          </form>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={testimony.id}
+                          className="p-4 rounded-sm bg-white border border-neutral-200 hover:border-neutral-300 shadow-xs transition-all space-y-3 flex flex-col justify-between"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                {testimony.avatarUrl ? (
+                                  <div className="relative w-10 h-10 rounded-full overflow-hidden border border-neutral-200 shrink-0">
+                                    <Image
+                                      src={testimony.avatarUrl}
+                                      alt={testimony.name}
+                                      fill
+                                      className="object-cover"
+                                      referrerPolicy="no-referrer"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 shrink-0">
+                                    <User className="w-5 h-5" />
+                                  </div>
+                                )}
+                                <div>
+                                  <h5 className="text-xs font-bold text-neutral-900">{testimony.name}</h5>
+                                  <p className="text-[10px] text-neutral-500">{testimony.role}</p>
+                                </div>
+                              </div>
+                              <span className="text-[9px] px-2 py-0.5 rounded-sm bg-neutral-100 text-neutral-600 font-mono shrink-0">
+                                {testimony.date || 'Recente'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-neutral-700 font-light italic leading-relaxed bg-neutral-50 p-2.5 rounded-sm border border-neutral-100 line-clamp-3">
+                              &ldquo;{testimony.content}&rdquo;
+                            </p>
+
+                            {testimony.activityName && (
+                              <div className="text-[10px] text-[#C5A059] font-medium flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 shrink-0" />
+                                <span>{testimony.activityName}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditTestimony(testimony)}
+                              className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-neutral-700 bg-white border border-neutral-200 hover:bg-[#1A1A1A] hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              <span>Editar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                removeTestimony(testimony.id);
+                                showNotification(`Testemunho de "${testimony.name}" removido com sucesso.`);
+                              }}
+                              className="p-1 rounded-sm text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                              title="Remover Testemunho"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
