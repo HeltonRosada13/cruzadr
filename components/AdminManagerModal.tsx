@@ -1,6 +1,6 @@
  'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
 import { PhotoItem, ChurchEvent, Testimony, CoordinationGroup } from '@/lib/types';
 import { saveHeroVideoBlob, clearHeroVideoBlob, saveVideoFileBlob, generateVideoThumbnailAndDuration } from '@/lib/videoStorage';
@@ -248,6 +248,33 @@ function AdminManagerModalInner() {
 
   const [editingTestimonyId, setEditingTestimonyId] = useState<string | null>(null);
   const [editingTestimonyForm, setEditingTestimonyForm] = useState<Testimony | null>(null);
+
+  // Listen to open-admin-tab custom event
+  useEffect(() => {
+    const handleOpenAdminTab = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: string }>;
+      if (customEvent.detail?.tab) {
+        setActiveTab(customEvent.detail.tab as any);
+      }
+      setChurchForm({
+        churchName: data.churchName || '',
+        logoPrefix: data.logoPrefix !== undefined ? data.logoPrefix : 'Catedral de',
+        logoSuffix: data.logoSuffix !== undefined ? data.logoSuffix : 'Amor e Fé',
+        logoImageUrl: data.logoImageUrl || '',
+        churchMotto: data.churchMotto || '',
+        churchAbout: data.churchAbout || '',
+        phone: data.phone || '',
+        whatsappNumber: data.whatsappNumber || '',
+        whatsappMessage: data.whatsappMessage || '',
+        email: data.email || '',
+        address: data.address || '',
+        cityCountry: data.cityCountry || '',
+      });
+      setIsAdminOpen(true);
+    };
+    window.addEventListener('open-admin-tab', handleOpenAdminTab);
+    return () => window.removeEventListener('open-admin-tab', handleOpenAdminTab);
+  }, [setIsAdminOpen, data]);
 
   const showNotification = (msg: string) => {
     setSuccessMsg(msg);
@@ -1063,6 +1090,7 @@ function AdminManagerModalInner() {
         <div className="flex items-center gap-2 p-3 bg-neutral-50 border-b border-neutral-200 overflow-x-auto">
           {[
             { id: 'activity', label: 'Atividade Principal', icon: Sparkles },
+            { id: 'church', label: 'Logotipo & Identidade', icon: Church },
             { id: 'highlights', label: `Destaques (${data.highlights.length})`, icon: Star },
             { id: 'photos', label: `Fotos (${data.photos.length})`, icon: ImageIcon },
             { id: 'videos', label: `Vídeos (${data.videos.length})`, icon: Video },
@@ -1070,7 +1098,6 @@ function AdminManagerModalInner() {
             { id: 'coordinations', label: `Coordenações (${data.coordinations?.length || 0})`, icon: Users },
             { id: 'testimonies', label: `Testemunhos (${data.testimonies?.length || 0})`, icon: MessageSquareHeart },
             { id: 'social', label: 'Redes Sociais & Links', icon: Share2 },
-            { id: 'church', label: 'Igreja & Contactos', icon: Phone },
             { id: 'cloud', label: 'Nuvem & Vercel', icon: Globe },
           ].map((tab) => {
             const Icon = tab.icon;

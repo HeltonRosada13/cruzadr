@@ -16,7 +16,8 @@ import {
   PhoneCall, 
   Sparkles,
   ChevronRight,
-  Users
+  Users,
+  Edit3
 } from 'lucide-react';
 
 export function Navbar() {
@@ -66,35 +67,53 @@ export function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        {/* Logo / Church Title in Editorial Hierarchy */}
-        <a
-          href="#inicio"
-          id="navbar-logo-link"
-          className="flex items-center gap-3 group text-left"
-        >
-          <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] group-hover:bg-[#C5A059] flex items-center justify-center text-white transition-colors duration-300 overflow-hidden relative shadow-xs shrink-0">
-            {data.logoImageUrl && data.logoImageUrl.trim() !== '' ? (
-              <Image
-                src={data.logoImageUrl}
-                alt={data.logoSuffix || 'Logo da Igreja'}
-                fill
-                sizes="36px"
-                className="object-contain p-0.5"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Church className="w-4 h-4 text-white stroke-[2]" />
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
-              {data.logoPrefix || 'Catedral de'}
-            </span>
-            <span className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
-              {data.logoSuffix || 'Amor e Fé'}
-            </span>
-          </div>
-        </a>
+        {/* Logo / Church Title in Editorial Hierarchy with Quick Admin Edit Trigger */}
+        <div className="flex items-center gap-1.5 group/logo">
+          <a
+            href="#inicio"
+            id="navbar-logo-link"
+            className="flex items-center gap-3 group text-left"
+          >
+            <div className="w-9 h-9 rounded-sm bg-[#1A1A1A] group-hover:bg-[#C5A059] flex items-center justify-center text-white transition-colors duration-300 overflow-hidden relative shadow-xs shrink-0">
+              {data.logoImageUrl && data.logoImageUrl.trim() !== '' ? (
+                <Image
+                  src={data.logoImageUrl}
+                  alt={data.logoSuffix || 'Logo da Igreja'}
+                  fill
+                  sizes="36px"
+                  className="object-contain p-0.5"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Church className="w-4 h-4 text-white stroke-[2]" />
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
+                {data.logoPrefix || 'Catedral de'}
+              </span>
+              <span className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
+                {data.logoSuffix || 'Amor e Fé'}
+              </span>
+            </div>
+          </a>
+
+          <button
+            id="navbar-edit-logo-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('open-admin-tab', { detail: { tab: 'church' } }));
+              }
+            }}
+            title="Editar Logotipo e Nome da Igreja no Painel Administrativo"
+            className="opacity-0 group-hover/logo:opacity-100 hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-neutral-400 hover:text-[#C5A059] hover:bg-neutral-100 rounded-sm cursor-pointer"
+            aria-label="Editar Logotipo e Nome da Igreja"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         {/* Desktop Navigation */}
         <nav id="desktop-nav-menu" className="hidden lg:flex items-center gap-6 xl:gap-8">
