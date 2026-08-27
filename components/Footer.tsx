@@ -149,16 +149,6 @@ export function Footer() {
                 );
               })}
             </div>
-
-            <div className="pt-1">
-              <button
-                onClick={() => setIsAdminOpen(true)}
-                className="w-full py-2 px-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Sparkles className="w-3 h-3 text-[#C5A059]" />
-                <span>Painel de Gestão</span>
-              </button>
-            </div>
           </div>
         </div>
 
