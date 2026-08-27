@@ -48,45 +48,81 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-neutral-800/80">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 pb-12 border-b border-neutral-800/80">
           
-          {/* Column 1: Church Identity & Slogan (4 cols) */}
+          {/* Links Rápidos (Navegação) */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-sm bg-[#C5A059] flex items-center justify-center text-neutral-950 shadow-sm relative overflow-hidden shrink-0">
-                {data.logoImageUrl && data.logoImageUrl.trim() !== '' ? (
-                  <Image
-                    src={data.logoImageUrl}
-                    alt={data.churchName || 'Logo'}
-                    fill
-                    sizes="36px"
-                    className="object-contain p-0.5"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <Church className="w-4 h-4 text-neutral-950 stroke-[2.2]" />
-                )}
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059]">
+              Navegação Rápida
+            </h3>
+
+            <ul className="grid grid-cols-2 gap-2 text-xs">
+              {[
+                { label: 'Início', href: '#inicio' },
+                { label: 'Sobre a Atividade', href: '#sobre' },
+                { label: 'Momentos em Destaque', href: '#destaques' },
+                { label: 'Galeria de Fotos', href: '#fotos' },
+                { label: 'Galeria de Vídeos', href: '#videos' },
+                { label: 'Agenda de Atividades', href: '#atividades' },
+                { label: 'Redes Sociais', href: '#redes-sociais' },
+              ].map((link, idx) => (
+                <li key={idx}>
+                  <button
+                    onClick={() => scrollTo(link.href)}
+                    className="text-neutral-400 hover:text-[#C5A059] transition-colors flex items-center gap-1 cursor-pointer font-light"
+                  >
+                    <ChevronRight className="w-3 h-3 text-[#C5A059]" />
+                    <span>{link.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Sede & Contactos */}
+          <div className="lg:col-span-5 space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059] flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Sede & Contactos</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-300 font-light">
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0 mt-0.5" />
+                <span>{data.address}, {data.cityCountry}</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] uppercase tracking-[0.25em] text-[#C5A059] font-bold">
-                  {data.logoPrefix || 'Igreja'}
-                </span>
-                <span className="text-base font-editorial italic text-white tracking-tight">
-                  {data.logoSuffix || data.churchName}
-                </span>
+
+              <div className="flex items-center gap-2.5">
+                <Phone className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
+                <span>{data.phone}</span>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <a
+                  href={`https://wa.me/${data.whatsappNumber.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 hover:underline font-medium"
+                >
+                  WhatsApp Oficial
+                </a>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <Mail className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
+                <span className="truncate">{data.email}</span>
               </div>
             </div>
+          </div>
 
-            <p className="text-sm font-editorial italic text-[#C5A059] leading-relaxed">
-              &quot;{data.churchMotto}&quot;
-            </p>
+          {/* Redes Sociais & Painel de Gestão */}
+          <div className="lg:col-span-3 space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059]">
+              Conecte-se
+            </h3>
 
-            <p className="text-xs text-neutral-400 font-light leading-relaxed">
-              {data.churchAbout}
-            </p>
-
-            {/* Social media icons list */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2">
               {data.socialLinks.map((social) => {
                 const Icon = getPlatformIcon(social.platform);
                 let socialTargetUrl = social.url;
@@ -113,94 +149,8 @@ export function Footer() {
                 );
               })}
             </div>
-          </div>
 
-          {/* Column 2: Horários dos Cultos (3 cols) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>Horários de Celebração</span>
-            </h3>
-
-            <div className="space-y-2">
-              {data.worshipSchedule.map((sched, idx) => (
-                <div key={idx} className="p-3 rounded-sm bg-neutral-900/60 border border-neutral-800/80">
-                  <div className="flex items-center justify-between text-xs font-bold text-white mb-0.5">
-                    <span>{sched.day}</span>
-                    <span className="text-[#C5A059] font-mono text-[11px]">{sched.time}</span>
-                  </div>
-                  <p className="text-[11px] text-neutral-400 font-light">{sched.name}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Column 3: Links Rápidos (2 cols) */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059]">
-              Navegação
-            </h3>
-
-            <ul className="space-y-2 text-xs">
-              {[
-                { label: 'Início', href: '#inicio' },
-                { label: 'Sobre a Atividade', href: '#sobre' },
-                { label: 'Momentos em Destaque', href: '#destaques' },
-                { label: 'Galeria de Fotos', href: '#fotos' },
-                { label: 'Galeria de Vídeos', href: '#videos' },
-                { label: 'Agenda de Atividades', href: '#atividades' },
-                { label: 'Redes Sociais', href: '#redes-sociais' },
-              ].map((link, idx) => (
-                <li key={idx}>
-                  <button
-                    onClick={() => scrollTo(link.href)}
-                    className="text-neutral-400 hover:text-[#C5A059] transition-colors flex items-center gap-1 cursor-pointer font-light"
-                  >
-                    <ChevronRight className="w-3 h-3 text-[#C5A059]" />
-                    <span>{link.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Column 4: Localização & Contactos (3 cols) */}
-          <div className="lg:col-span-3 space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059] flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>Sede & Contactos</span>
-            </h3>
-
-            <div className="space-y-3 text-xs text-neutral-300 font-light">
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0 mt-0.5" />
-                <span>{data.address}, {data.cityCountry}</span>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
-                <span>{data.phone}</span>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <a
-                  href={`https://wa.me/${data.whatsappNumber.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald-400 hover:underline"
-                >
-                  WhatsApp Oficial
-                </a>
-              </div>
-
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
-                <span className="truncate">{data.email}</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 onClick={() => setIsAdminOpen(true)}
                 className="w-full py-2 px-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
