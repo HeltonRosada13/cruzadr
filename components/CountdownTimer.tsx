@@ -46,42 +46,45 @@ function getTimeDifference(targetDateString: string, nowMs: number) {
   };
 }
 
-let cachedClientTime = typeof window !== 'undefined' ? Date.now() : 0;
-const timeListeners = new Set<() => void>();
-let timeIntervalId: ReturnType<typeof setInterval> | null = null;
+const emptySubscribe = () => () => {};
 
-function subscribeTime(onStoreChange: () => void) {
-  timeListeners.add(onStoreChange);
-  if (!timeIntervalId && typeof window !== 'undefined') {
-    cachedClientTime = Date.now();
-    timeIntervalId = setInterval(() => {
-      cachedClientTime = Date.now();
-      timeListeners.forEach((listener) => listener());
+let nowTimestamp = typeof window !== 'undefined' ? Date.now() : 0;
+const subscribers = new Set<() => void>();
+let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+function subscribeToTime(callback: () => void) {
+  subscribers.add(callback);
+  if (!timerInterval && typeof window !== 'undefined') {
+    nowTimestamp = Date.now();
+    timerInterval = setInterval(() => {
+      nowTimestamp = Date.now();
+      subscribers.forEach((cb) => cb());
     }, 1000);
   }
   return () => {
-    timeListeners.delete(onStoreChange);
-    if (timeListeners.size === 0 && timeIntervalId) {
-      clearInterval(timeIntervalId);
-      timeIntervalId = null;
+    subscribers.delete(callback);
+    if (subscribers.size === 0 && timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
     }
   };
 }
 
-function getClientSnapshot(): number {
-  return cachedClientTime;
+function getClientTime() {
+  return nowTimestamp;
 }
 
-function getServerSnapshot(): number {
+function getServerTime() {
   return 0;
 }
 
 export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
-  const currentTime = useSyncExternalStore(subscribeTime, getClientSnapshot, getServerSnapshot);
-  const mounted = currentTime > 0;
-  const timeLeft = getTimeDifference(targetDateString, currentTime);
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const currentTime = useSyncExternalStore(subscribeToTime, getClientTime, getServerTime);
 
-  if (mounted && timeLeft.isPast) {
+  const timeLeft = getTimeDifference(targetDateString, isClient ? currentTime : 0);
+
+  if (isClient && timeLeft.isPast) {
     return (
       <div
         id="countdown-completed-banner"
@@ -106,6 +109,7 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
   return (
     <div
       id="live-countdown-container"
+      suppressHydrationWarning
       className="w-full max-w-xl mx-auto backdrop-blur-md bg-black/60 border border-white/20 rounded-sm p-4 sm:p-5 shadow-2xl"
     >
       <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-white/10">
@@ -127,7 +131,7 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
             suppressHydrationWarning
             className="text-2xl sm:text-3xl font-editorial italic text-white leading-none"
           >
-            {mounted ? format2Digits(timeLeft.days) : '00'}
+            {isClient ? format2Digits(timeLeft.days) : '00'}
           </span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-1">
             Dias
@@ -140,7 +144,7 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
             suppressHydrationWarning
             className="text-2xl sm:text-3xl font-editorial italic text-white leading-none"
           >
-            {mounted ? format2Digits(timeLeft.hours) : '00'}
+            {isClient ? format2Digits(timeLeft.hours) : '00'}
           </span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-1">
             Horas
@@ -153,7 +157,7 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
             suppressHydrationWarning
             className="text-2xl sm:text-3xl font-editorial italic text-white leading-none"
           >
-            {mounted ? format2Digits(timeLeft.minutes) : '00'}
+            {isClient ? format2Digits(timeLeft.minutes) : '00'}
           </span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-1">
             Min
@@ -166,7 +170,7 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
             suppressHydrationWarning
             className="text-2xl sm:text-3xl font-editorial italic text-[#C5A059] leading-none"
           >
-            {mounted ? format2Digits(timeLeft.seconds) : '00'}
+            {isClient ? format2Digits(timeLeft.seconds) : '00'}
           </span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-[#C5A059] mt-1">
             Seg

@@ -390,6 +390,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     SWR_KEY,
     churchDataFetcher,
     {
+      fallbackData: initialChurchData,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       revalidateOnMount: true,
@@ -401,18 +402,18 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
   const activeData = swrData || memoryState || initialChurchData;
 
   useEffect(() => {
+    const local = getInitialLocalCachedState();
+    if (local && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
+      memoryState = local;
+      mutate(local, false);
+    }
+  }, [mutate]);
+
+  useEffect(() => {
     if (swrData) {
       memoryState = swrData;
     }
   }, [swrData]);
-
-  // Safety maximum fallback timer: ensures page never hangs indefinitely if offline
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsTimedOut(true);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Real-time Firestore onSnapshot push listener for instant cross-device updates
   useEffect(() => {
@@ -855,7 +856,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     <ChurchContext.Provider
       value={{
         data: activeData,
-        isReady: Boolean(isMounted && (swrData || isTimedOut)),
+        isReady: isMounted,
         updateCurrentActivity,
         updateChurchInfo,
         addPhoto,
