@@ -118,6 +118,8 @@ export interface ChurchSettings {
   videos: VideoItem[];
   upcomingEvents: ChurchEvent[];
   testimonies: Testimony[];
+  editTimestamp?: number;
+  lastUpdatedAt?: string;
   developedBy: {
     name: string;
     description: string;

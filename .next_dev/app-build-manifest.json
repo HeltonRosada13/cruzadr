@@ -1,0 +1,9 @@
+{
+  "pages": {
+    "/api/church-data/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/church-data/route.js"
+    ]
+  }
+}
