@@ -179,12 +179,7 @@ function sanitizeSavedData(savedRaw: string | Record<string, any>): ChurchSettin
 function getInitialLocalCachedState(): ChurchSettings {
   if (typeof window === 'undefined') return initialChurchData;
   try {
-    const v2 = localStorage.getItem('catedral_amor_e_fe_data_v2');
-    const v4 = localStorage.getItem('catedral_amor_e_fe_data_v4');
-    const v3 = localStorage.getItem('catedral_amor_e_fe_data_v3');
-    const v1 = localStorage.getItem('catedral_amor_e_fe_data_v1');
-    const legacy = localStorage.getItem('church_data') || localStorage.getItem('catedral_data');
-    const saved = v2 || v4 || v3 || v1 || legacy;
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       return sanitizeSavedData(saved);
     }
@@ -379,6 +374,7 @@ const ChurchContext = createContext<ChurchContextType | undefined>(undefined);
 
 export function ChurchProvider({ children }: { children: React.ReactNode }) {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isTimedOut, setIsTimedOut] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>('ready');
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(() => checkIsQuotaExceededStored());
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
@@ -394,27 +390,29 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     SWR_KEY,
     churchDataFetcher,
     {
-      fallbackData: initialChurchData,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 1500, // 1.5s deduplication for fast freshness
-      refreshInterval: 4000, // 4-second active background poll so all devices/browsers receive updates immediately
+      revalidateOnMount: true,
+      dedupingInterval: 1000,
+      refreshInterval: 4000,
     }
   );
 
   const activeData = swrData || memoryState || initialChurchData;
 
   useEffect(() => {
-    const local = getInitialLocalCachedState();
-    if (local && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
-      memoryState = local;
-      mutate(local, false);
+    if (swrData) {
+      memoryState = swrData;
     }
-  }, [mutate]);
+  }, [swrData]);
 
+  // Safety maximum fallback timer: ensures page never hangs indefinitely if offline
   useEffect(() => {
-    memoryState = activeData;
-  }, [activeData]);
+    const timer = setTimeout(() => {
+      setIsTimedOut(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Real-time Firestore onSnapshot push listener for instant cross-device updates
   useEffect(() => {
@@ -434,7 +432,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
               const currentLocalTs = getStoredLocalEditTimestamp() || 0;
 
               // If remote is strictly newer or local has no timestamp yet
-              if ((!currentLocalTs && remoteTs > 0) || (remoteTs > currentLocalTs)) {
+              if ((!currentLocalTs && remoteTs > 0) || (remoteTs >= currentLocalTs)) {
                 const sanitized = sanitizeSavedData(remoteData);
                 memoryState = sanitized;
                 mutate(sanitized, false);
@@ -857,7 +855,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     <ChurchContext.Provider
       value={{
         data: activeData,
-        isReady: isMounted,
+        isReady: Boolean(isMounted && (swrData || isTimedOut)),
         updateCurrentActivity,
         updateChurchInfo,
         addPhoto,
