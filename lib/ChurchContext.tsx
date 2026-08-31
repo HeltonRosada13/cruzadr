@@ -55,9 +55,9 @@ interface ChurchContextType {
   firebaseConsoleUrl: string;
 }
 
-const LOCAL_STORAGE_KEY = 'catedral_amor_e_fe_data_v2';
-const LAST_EDIT_TS_KEY = 'catedral_last_edit_timestamp_v2';
-const QUOTA_STORAGE_KEY = 'catedral_firestore_quota_exceeded_timestamp';
+const LOCAL_STORAGE_KEY = 'catedral_amor_e_fe_data_v3';
+const LAST_EDIT_TS_KEY = 'catedral_last_edit_timestamp_v3';
+const QUOTA_STORAGE_KEY = 'catedral_firestore_quota_exceeded_timestamp_v3';
 const SWR_KEY = '/api/church-data';
 const FIRESTORE_DOC_PATH = 'church_data';
 const FIRESTORE_DOC_ID = 'main';
@@ -181,7 +181,20 @@ function getInitialLocalCachedState(): ChurchSettings {
   try {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
-      return sanitizeSavedData(saved);
+      const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+      const baseTs = initialChurchData.editTimestamp || 0;
+      const localTs = typeof parsed?.editTimestamp === 'number'
+        ? parsed.editTimestamp
+        : (parsed?.lastUpdatedAt ? new Date(parsed.lastUpdatedAt).getTime() : 0);
+
+      // If local cache is strictly newer than canonical initial data, use it
+      if (localTs > baseTs) {
+        return sanitizeSavedData(parsed);
+      }
+      // Otherwise, local cache is older/stale. Clean it up with latest data
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialChurchData));
+      setStoredLocalEditTimestamp(baseTs);
+      return initialChurchData;
     }
   } catch {}
   return initialChurchData;
@@ -196,6 +209,7 @@ const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in 
 const churchDataFetcher = async (): Promise<ChurchSettings> => {
   const localState = getInitialLocalCachedState();
   const currentLocalTs = getStoredLocalEditTimestamp() || 0;
+  const baseTs = initialChurchData.editTimestamp || 0;
 
   try {
     const res = await fetch(SWR_KEY, {
@@ -213,7 +227,7 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
           : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
 
         // If local user has newer unsynced edits, preserve them and push to server
-        if (currentLocalTs > 0 && currentLocalTs > remoteTs) {
+        if (currentLocalTs > baseTs && currentLocalTs > remoteTs) {
           // Asynchronously propagate local edits to server
           persistToFirestore(localState, false).catch(() => {});
           return localState;
@@ -221,6 +235,7 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
 
         // Remote data is newer or equally fresh
         const sanitized = sanitizeSavedData(remoteData);
+        memoryState = sanitized;
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
@@ -400,14 +415,6 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
   );
 
   const activeData = swrData || memoryState || initialChurchData;
-
-  useEffect(() => {
-    const local = getInitialLocalCachedState();
-    if (local && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
-      memoryState = local;
-      mutate(local, false);
-    }
-  }, [mutate]);
 
   useEffect(() => {
     if (swrData) {
