@@ -89,10 +89,10 @@ export function Navbar() {
               )}
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
+              <span suppressHydrationWarning className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
                 {data.logoPrefix || 'Catedral de'}
               </span>
-              <span className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
+              <span suppressHydrationWarning className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
                 {data.logoSuffix || 'Amor e Fé'}
               </span>
             </div>

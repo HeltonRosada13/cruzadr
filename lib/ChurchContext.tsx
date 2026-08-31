@@ -182,21 +182,13 @@ function getInitialLocalCachedState(): ChurchSettings {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
-      const baseTs = initialChurchData.editTimestamp || 0;
-      const localTs = typeof parsed?.editTimestamp === 'number'
-        ? parsed.editTimestamp
-        : (parsed?.lastUpdatedAt ? new Date(parsed.lastUpdatedAt).getTime() : 0);
-
-      // If local cache is strictly newer than canonical initial data, use it
-      if (localTs > baseTs) {
+      if (parsed && typeof parsed === 'object' && (parsed.churchName || parsed.currentActivity)) {
         return sanitizeSavedData(parsed);
       }
-      // Otherwise, local cache is older/stale. Clean it up with latest data
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialChurchData));
-      setStoredLocalEditTimestamp(baseTs);
-      return initialChurchData;
     }
-  } catch {}
+  } catch (err) {
+    console.warn('LocalStorage read notice:', err);
+  }
   return initialChurchData;
 }
 
@@ -208,8 +200,9 @@ const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in 
 // SWR fetcher with robust fallback, local edit protection and auto cloud-seed
 const churchDataFetcher = async (): Promise<ChurchSettings> => {
   const localState = getInitialLocalCachedState();
-  const currentLocalTs = getStoredLocalEditTimestamp() || 0;
-  const baseTs = initialChurchData.editTimestamp || 0;
+  const currentLocalTs = typeof localState.editTimestamp === 'number'
+    ? localState.editTimestamp
+    : (getStoredLocalEditTimestamp() || 0);
 
   try {
     const res = await fetch(SWR_KEY, {
@@ -227,9 +220,9 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
           : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
 
         // If local user has newer unsynced edits, preserve them and push to server
-        if (currentLocalTs > baseTs && currentLocalTs > remoteTs) {
+        if (currentLocalTs > 0 && currentLocalTs > remoteTs) {
           // Asynchronously propagate local edits to server
-          persistToFirestore(localState, false).catch(() => {});
+          persistToFirestore(localState, true).catch(() => {});
           return localState;
         }
 
@@ -405,16 +398,25 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     SWR_KEY,
     churchDataFetcher,
     {
-      fallbackData: initialChurchData,
+      fallbackData: memoryState,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       revalidateOnMount: true,
-      dedupingInterval: 1000,
+      dedupingInterval: 500,
       refreshInterval: 4000,
     }
   );
 
   const activeData = swrData || memoryState || initialChurchData;
+
+  useEffect(() => {
+    // On client mount, check if localStorage has unsynced/newer local state
+    const local = getInitialLocalCachedState();
+    if (local && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
+      memoryState = local;
+      mutate(local, false);
+    }
+  }, [mutate]);
 
   useEffect(() => {
     if (swrData) {
@@ -516,12 +518,19 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
   }, [mutate]);
 
   // Unified updater: Updates cache immediately (0ms latency), persists to localStorage, alerts other tabs, and saves to server
-  const updateStore = useCallback((updater: (prev: ChurchSettings) => ChurchSettings, immediate = false) => {
+  const updateStore = useCallback((updater: (prev: ChurchSettings) => ChurchSettings, immediate = true) => {
     const now = Date.now();
     setStoredLocalEditTimestamp(now);
     
-    // 1. Optimistic SWR & memory update
-    const updated = updater(memoryState);
+    // 1. Optimistic SWR & memory update with current timestamp attached
+    const baseObj = memoryState || getInitialLocalCachedState();
+    const updatedRaw = updater(baseObj);
+    const updated: ChurchSettings = {
+      ...updatedRaw,
+      editTimestamp: now,
+      lastUpdatedAt: new Date(now).toISOString(),
+    };
+
     memoryState = updated;
     mutate(updated, false);
 
@@ -553,7 +562,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         persistToFirestore(updated, false).then((ok) => {
           setSyncState(ok ? 'synced' : (isFirestoreQuotaExceeded ? 'quota_exceeded' : 'offline'));
         });
-      }, 500);
+      }, 300);
     }
   }, [mutate]);
 

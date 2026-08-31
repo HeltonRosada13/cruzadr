@@ -53,7 +53,7 @@ export const initialChurchData: ChurchSettings = {
     "heroVideo": "https://www.youtube.com/watch?v=BuSjz-Rbw-E",
     "videoPromoUrl": "https://www.youtube.com/watch?v=ScMzIvxBSi4",
     "badge": "Evento Especial do Ano",
-    "heroEyebrow": "EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR ",
+    "heroEyebrow": "EVENTO ESPECIAL DO ANO — IGREJA",
     "status": "upcoming"
   },
   "highlights": [
@@ -330,6 +330,6 @@ export const initialChurchData: ChurchSettings = {
     "description": "Soluções Digitais e Desenvolvimento Web de Alto Impacto",
     "url": "https://baobauniverse.com"
   },
-  "editTimestamp": 1787796353086,
-  "lastUpdatedAt": "2026-08-31T21:18:38.169Z"
+  "editTimestamp": 1788219028164,
+  "lastUpdatedAt": "2026-08-31T23:30:29.125Z"
 };

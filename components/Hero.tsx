@@ -437,14 +437,15 @@ export function Hero() {
         </button>
 
         {/* Eyebrow in Editorial Typography */}
-        <span className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center gap-2">
+        <span suppressHydrationWarning className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-          <span>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ')}</span>
+          <span suppressHydrationWarning>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ')}</span>
         </span>
 
         {/* Activity Main Title in Editorial Serif */}
         <h1
           id="hero-activity-title"
+          suppressHydrationWarning
           className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.92] mb-6 max-w-4xl drop-shadow-md"
         >
           {activity.name}
@@ -453,6 +454,7 @@ export function Hero() {
         {/* Subtitle */}
         <p
           id="hero-activity-subtitle"
+          suppressHydrationWarning
           className="text-neutral-200 max-w-2xl text-sm sm:text-base md:text-lg font-light leading-relaxed mb-8 drop-shadow"
         >
           {activity.subtitle}
