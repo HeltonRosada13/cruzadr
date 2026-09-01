@@ -179,22 +179,22 @@ function AdminManagerModalInner() {
   // Form states initialized directly from current church data
   const [activityForm, setActivityForm] = useState({
     ...data.currentActivity,
-    badge: data.currentActivity?.badge || 'Evento Especial do Ano',
-    heroEyebrow: data.currentActivity?.heroEyebrow || 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ',
+    badge: data.currentActivity?.badge || '',
+    heroEyebrow: data.currentActivity?.heroEyebrow || '',
   });
   const [churchForm, setChurchForm] = useState({
-    churchName: data.churchName,
+    churchName: data.churchName || 'Igreja Catedral de Amor e Fé',
     logoPrefix: data.logoPrefix || 'Catedral de',
     logoSuffix: data.logoSuffix || 'Amor e Fé',
     logoImageUrl: data.logoImageUrl || '',
-    churchMotto: data.churchMotto,
+    churchMotto: data.churchMotto || '',
     churchAbout: data.churchAbout || '',
-    phone: data.phone,
-    whatsappNumber: data.whatsappNumber,
-    whatsappMessage: data.whatsappMessage,
-    email: data.email,
-    address: data.address,
-    cityCountry: data.cityCountry,
+    phone: data.phone || '',
+    whatsappNumber: data.whatsappNumber || '',
+    whatsappMessage: data.whatsappMessage || '',
+    email: data.email || '',
+    address: data.address || '',
+    cityCountry: data.cityCountry || '',
   });
 
   // New photo input states
@@ -529,6 +529,59 @@ function AdminManagerModalInner() {
     updateChurchInfo(churchForm);
     syncNowWithCloud();
     showNotification('Dados de contacto e da igreja salvos com sucesso!');
+  };
+
+  const handleClearAllToBlank = async () => {
+    const confirmed = window.confirm(
+      'Tem a certeza de que deseja esvaziar todos os campos do site para começar do zero?\n\n' +
+      '• Todas as fotos, vídeos, eventos, destaques e textos de exemplo serão limpos.\n' +
+      '• Somente as informações que publicar a partir de agora na área do administrador aparecerão no site.\n' +
+      '• Esta alteração será enviada a todos os utilizadores em tempo real.'
+    );
+    if (!confirmed) return;
+
+    resetToDefaults();
+    setActivityForm({
+      id: 'act-main',
+      name: '',
+      subtitle: '',
+      badge: '',
+      heroEyebrow: '',
+      description: '',
+      theme: '',
+      themeVerse: '',
+      date: '',
+      formattedDate: '',
+      time: '',
+      location: '',
+      address: '',
+      organization: '',
+      targetAudience: '',
+      goal: '',
+      importantNotes: '',
+      pastors: [],
+      heroVideo: '',
+      videoPromoUrl: '',
+      ctaButtonText: '',
+      ctaButtonLink: '',
+      countdownTarget: '',
+    });
+    setChurchForm({
+      churchName: 'Igreja Catedral de Amor e Fé',
+      logoPrefix: 'Catedral de',
+      logoSuffix: 'Amor e Fé',
+      logoImageUrl: '',
+      churchMotto: '',
+      churchAbout: '',
+      phone: '',
+      whatsappNumber: '',
+      whatsappMessage: '',
+      email: '',
+      address: '',
+      cityCountry: '',
+    });
+    await syncNowWithCloud();
+    showNotification('Todos os campos foram esvaziados! O site está limpo e pronto para as suas publicações oficiais.');
   };
 
   const handleAddPhotoSubmit = (e: React.FormEvent) => {
@@ -1009,6 +1062,17 @@ function AdminManagerModalInner() {
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={handleClearAllToBlank}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition-colors cursor-pointer"
+              title="Esvaziar todos os campos do site para começar do zero"
+            >
+              <Trash2 className="w-3 h-3 text-rose-600" />
+              <span className="hidden sm:inline">Esvaziar Todos os Campos</span>
+              <span className="sm:hidden">Esvaziar</span>
+            </button>
+
             <button
               onClick={async () => {
                 await syncNowWithCloud();

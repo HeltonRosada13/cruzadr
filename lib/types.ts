@@ -3,6 +3,8 @@ export interface ChurchActivity {
   name: string;
   subtitle: string;
   theme: string;
+  description?: string;
+  themeVerse?: string;
   date: string; // ISO date string e.g. "2026-08-25T18:00:00"
   formattedDate: string; // e.g. "25 a 28 de Agosto de 2026"
   time: string;
@@ -12,12 +14,16 @@ export interface ChurchActivity {
   targetAudience: string;
   goal: string;
   importantNotes: string;
-  heroImage: string;
+  heroImage?: string;
   heroVideo?: string;
   videoPromoUrl?: string;
   badge?: string;
   heroEyebrow?: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  pastors?: string[];
+  ctaButtonText?: string;
+  ctaButtonLink?: string;
+  countdownTarget?: string;
+  status?: 'upcoming' | 'ongoing' | 'completed';
 }
 
 export interface PhotoItem {

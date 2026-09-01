@@ -30,7 +30,8 @@ export { isYouTubeVideoUrl, formatYouTubeEmbedUrl };
 
 export function VideoGallery() {
   const { data } = useChurch();
-  const videos = data.videos;
+  const rawVideos = data?.videos;
+  const videos = useMemo(() => (Array.isArray(rawVideos) ? rawVideos : []), [rawVideos]);
 
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -364,6 +365,10 @@ export function VideoGallery() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  if (!videos || videos.length === 0) {
+    return null;
+  }
 
   return (
     <section

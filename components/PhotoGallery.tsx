@@ -20,7 +20,7 @@ import Image from 'next/image';
 
 export function PhotoGallery() {
   const { data } = useChurch();
-  const photos = data.photos;
+  const photos = Array.isArray(data?.photos) ? data.photos : [];
 
   const [activeCategory, setActiveCategory] = useState<string>('Todos');
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -44,6 +44,26 @@ export function PhotoGallery() {
       document.body.style.overflow = '';
     };
   }, [selectedPhotoIndex]);
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedPhotoIndex === null) return;
+      if (e.key === 'Escape') setSelectedPhotoIndex(null);
+      if (e.key === 'ArrowLeft') {
+        setSelectedPhotoIndex((prev) =>
+          prev === 0 ? filteredPhotos.length - 1 : (prev ?? 0) - 1
+        );
+      }
+      if (e.key === 'ArrowRight') {
+        setSelectedPhotoIndex((prev) =>
+          prev === filteredPhotos.length - 1 ? 0 : (prev ?? 0) + 1
+        );
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPhotoIndex, filteredPhotos.length]);
 
   const handleOpenLightbox = (index: number) => {
     setSelectedPhotoIndex(index);
@@ -69,25 +89,9 @@ export function PhotoGallery() {
     );
   };
 
-  // Keyboard navigation for lightbox
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedPhotoIndex === null) return;
-      if (e.key === 'Escape') setSelectedPhotoIndex(null);
-      if (e.key === 'ArrowLeft') {
-        setSelectedPhotoIndex((prev) =>
-          prev === 0 ? filteredPhotos.length - 1 : (prev ?? 0) - 1
-        );
-      }
-      if (e.key === 'ArrowRight') {
-        setSelectedPhotoIndex((prev) =>
-          prev === filteredPhotos.length - 1 ? 0 : (prev ?? 0) + 1
-        );
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhotoIndex, filteredPhotos.length]);
+  if (!photos || photos.length === 0) {
+    return null;
+  }
 
   const handleSharePhoto = (photo: PhotoItem) => {
     if (navigator.share) {

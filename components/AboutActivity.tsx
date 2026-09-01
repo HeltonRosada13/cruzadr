@@ -101,6 +101,14 @@ export function AboutActivity() {
     },
   ];
 
+  const visibleInfoItems = infoItems.filter(
+    (item) => item.value && item.value.trim() !== '' && item.value.trim() !== '—' && item.value.trim() !== '— —'
+  );
+
+  if (visibleInfoItems.length === 0 && !activity.description && !activity.name) {
+    return null;
+  }
+
   return (
     <section
       id="sobre"
@@ -115,47 +123,49 @@ export function AboutActivity() {
           id="section-title-sobre"
           className="text-3xl sm:text-4xl md:text-5xl font-editorial italic text-neutral-900 tracking-tight font-normal"
         >
-          Propósito & Detalhes da Programação
+          {activity.name ? `${activity.name} — Detalhes` : 'Propósito & Detalhes da Programação'}
         </h2>
         <div className="w-12 h-[1px] bg-[#C5A059] mx-auto mt-4" />
         <p className="mt-4 text-sm sm:text-base text-neutral-600 font-light leading-relaxed">
-          Tudo o que precisa de saber sobre este momento especial preparado com excelência e oração para edificar a sua vida e a sua família.
+          {activity.description || 'Tudo o que precisa de saber sobre este momento especial preparado com excelência e oração para edificar a sua vida e a sua família.'}
         </p>
       </div>
 
       {/* Main Info Grid in Editorial Minimalist Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
-        {infoItems.map((item, idx) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={idx}
-              id={`info-card-${idx}`}
-              className={`p-6 bg-white border rounded-sm transition-all duration-300 group ${
-                item.highlight
-                  ? 'md:col-span-2 lg:col-span-2 bg-[#C5A059]/5 border-[#C5A059]/30 shadow-sm'
-                  : 'border-neutral-200/80 hover:border-neutral-900 shadow-sm'
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  item.highlight ? 'bg-[#C5A059]/15 text-[#C5A059]' : 'bg-neutral-100 text-neutral-700'
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider mb-1 leading-none">
-                    {item.label}
-                  </p>
-                  <p className={`text-sm leading-relaxed ${item.highlight ? 'text-neutral-900 font-semibold text-base sm:text-lg font-editorial italic' : 'text-neutral-800 font-medium'}`}>
-                    {item.value}
-                  </p>
+      {visibleInfoItems.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+          {visibleInfoItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                id={`info-card-${idx}`}
+                className={`p-6 bg-white border rounded-sm transition-all duration-300 group ${
+                  item.highlight
+                    ? 'md:col-span-2 lg:col-span-2 bg-[#C5A059]/5 border-[#C5A059]/30 shadow-sm'
+                    : 'border-neutral-200/80 hover:border-neutral-900 shadow-sm'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    item.highlight ? 'bg-[#C5A059]/15 text-[#C5A059]' : 'bg-neutral-100 text-neutral-700'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider mb-1 leading-none">
+                      {item.label}
+                    </p>
+                    <p className={`text-sm leading-relaxed ${item.highlight ? 'text-neutral-900 font-semibold text-base sm:text-lg font-editorial italic' : 'text-neutral-800 font-medium'}`}>
+                      {item.value}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Action Utilities Bar in Editorial Layout */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-white border border-neutral-200/80 rounded-sm shadow-sm">

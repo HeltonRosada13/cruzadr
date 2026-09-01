@@ -38,16 +38,28 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const hasAbout = Boolean(
+    data.currentActivity?.description ||
+    data.currentActivity?.theme ||
+    data.currentActivity?.formattedDate ||
+    data.currentActivity?.name
+  );
+  const hasEvents = Boolean(data.upcomingEvents && data.upcomingEvents.length > 0);
+  const hasPhotos = Boolean(data.photos && data.photos.length > 0);
+  const hasVideos = Boolean(data.videos && data.videos.length > 0);
+  const hasTestimonies = Boolean(data.testimonies && data.testimonies.length > 0);
+  const hasSocial = Boolean(data.socialLinks && data.socialLinks.length > 0);
+
   const navItems = [
-    { label: 'Início', href: '#inicio' },
-    { label: 'Sobre', href: '#sobre' },
-    { label: 'Atividades', href: '#atividades' },
-    { label: 'Galeria', href: '#fotos' },
-    { label: 'Vídeos', href: '#videos' },
-    { label: 'Testemunhos', href: '#testemunhos' },
-    { label: 'Redes', href: '#redes-sociais' },
-    { label: 'Contacto', href: '#contacto' },
-  ];
+    { label: 'Início', href: '#inicio', show: true },
+    { label: 'Sobre', href: '#sobre', show: hasAbout },
+    { label: 'Atividades', href: '#atividades', show: hasEvents },
+    { label: 'Galeria', href: '#fotos', show: hasPhotos },
+    { label: 'Vídeos', href: '#videos', show: hasVideos },
+    { label: 'Testemunhos', href: '#testemunhos', show: hasTestimonies },
+    { label: 'Redes', href: '#redes-sociais', show: hasSocial },
+    { label: 'Contacto', href: '#contacto', show: true },
+  ].filter((item) => item.show);
 
   const handleNavClick = (href: string) => {
     setMobileMenuOpen(false);

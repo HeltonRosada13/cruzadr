@@ -20,7 +20,7 @@ import Image from 'next/image';
 
 export function ActivitiesSchedule() {
   const { data } = useChurch();
-  const events = data.upcomingEvents;
+  const events = Array.isArray(data?.upcomingEvents) ? data.upcomingEvents : [];
   const [selectedEvent, setSelectedEvent] = useState<ChurchEvent | null>(null);
   const [registered, setRegistered] = useState(false);
 
@@ -34,6 +34,10 @@ export function ActivitiesSchedule() {
       document.body.style.overflow = '';
     };
   }, [selectedEvent]);
+
+  if (!events || events.length === 0) {
+    return null;
+  }
 
   const handleOpenEventModal = (event: ChurchEvent) => {
     setSelectedEvent(event);

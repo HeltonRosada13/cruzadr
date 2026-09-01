@@ -16,7 +16,11 @@ import {
 
 export function SocialMediaSection() {
   const { data } = useChurch();
-  const socialLinks = data.socialLinks;
+  const socialLinks = Array.isArray(data?.socialLinks) ? data.socialLinks : [];
+
+  if (!socialLinks || socialLinks.length === 0) {
+    return null;
+  }
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {

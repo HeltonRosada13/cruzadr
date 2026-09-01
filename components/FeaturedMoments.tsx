@@ -24,7 +24,11 @@ import Image from 'next/image';
 
 export function FeaturedMoments() {
   const { data } = useChurch();
-  const highlights = data.highlights;
+  const highlights = Array.isArray(data?.highlights) ? data.highlights : [];
+
+  if (!highlights || highlights.length === 0) {
+    return null;
+  }
 
   const getIcon = (iconName: string) => {
     switch (iconName) {

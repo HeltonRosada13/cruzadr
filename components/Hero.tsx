@@ -427,19 +427,21 @@ export function Hero() {
       <div className="relative z-20 max-w-5xl mx-auto text-center flex flex-col items-center">
         
         {/* BOTÃO COORDENAÇÕES (COMISSÕES DA CRUZADA NO WHATSAPP) */}
-        <button
-          id="hero-coordinations-button-top"
-          onClick={() => setIsCoordinationsOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2 mb-4 rounded-full bg-[#C5A059] hover:bg-[#b08e4d] text-neutral-950 font-bold text-[11px] uppercase tracking-widest transition-all transform hover:-translate-y-0.5 shadow-lg ring-2 ring-[#C5A059]/40 cursor-pointer animate-in fade-in duration-300"
-        >
-          <Users className="w-3.5 h-3.5 stroke-[2.2]" />
-          <span>Coordenações</span>
-        </button>
+        {data.coordinations && data.coordinations.length > 0 && (
+          <button
+            id="hero-coordinations-button-top"
+            onClick={() => setIsCoordinationsOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2 mb-4 rounded-full bg-[#C5A059] hover:bg-[#b08e4d] text-neutral-950 font-bold text-[11px] uppercase tracking-widest transition-all transform hover:-translate-y-0.5 shadow-lg ring-2 ring-[#C5A059]/40 cursor-pointer animate-in fade-in duration-300"
+          >
+            <Users className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Coordenações</span>
+          </button>
+        )}
 
         {/* Eyebrow in Editorial Typography */}
         <span suppressHydrationWarning className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-          <span suppressHydrationWarning>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ')}</span>
+          <span suppressHydrationWarning>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : (data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase())}</span>
         </span>
 
         {/* Activity Main Title in Editorial Serif */}
@@ -448,33 +450,41 @@ export function Hero() {
           suppressHydrationWarning
           className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.92] mb-6 max-w-4xl drop-shadow-md"
         >
-          {activity.name}
+          {activity.name || data.churchName || 'Igreja Catedral de Amor e Fé'}
         </h1>
 
         {/* Subtitle */}
-        <p
-          id="hero-activity-subtitle"
-          suppressHydrationWarning
-          className="text-neutral-200 max-w-2xl text-sm sm:text-base md:text-lg font-light leading-relaxed mb-8 drop-shadow"
-        >
-          {activity.subtitle}
-        </p>
+        {activity.subtitle && activity.subtitle.trim() !== '' && (
+          <p
+            id="hero-activity-subtitle"
+            suppressHydrationWarning
+            className="text-neutral-200 max-w-2xl text-sm sm:text-base md:text-lg font-light leading-relaxed mb-8 drop-shadow"
+          >
+            {activity.subtitle}
+          </p>
+        )}
 
         {/* Quick event meta badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-9 text-xs sm:text-sm text-neutral-200">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-black/50 border border-white/15 backdrop-blur-md">
-            <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span className="font-medium tracking-wide">{activity.formattedDate}</span>
+        {(activity.formattedDate || activity.location) && (
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-9 text-xs sm:text-sm text-neutral-200">
+            {activity.formattedDate && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-black/50 border border-white/15 backdrop-blur-md">
+                <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span className="font-medium tracking-wide">{activity.formattedDate}</span>
+              </div>
+            )}
+            {activity.location && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-black/50 border border-white/15 backdrop-blur-md">
+                <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span className="font-medium tracking-wide">{activity.location}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-[#C5A059]/20 border border-[#C5A059]/40 text-[#F6EEDF] backdrop-blur-md font-semibold">
+              <Heart className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Entrada Livre</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-black/50 border border-white/15 backdrop-blur-md">
-            <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span className="font-medium tracking-wide">{activity.location}</span>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-sm bg-[#C5A059]/20 border border-[#C5A059]/40 text-[#F6EEDF] backdrop-blur-md font-semibold">
-            <Heart className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span>Entrada Livre</span>
-          </div>
-        </div>
+        )}
 
         {/* Visitor Action Buttons: SABER MAIS & GALERIA */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-10">
@@ -487,21 +497,25 @@ export function Hero() {
             <ArrowDown className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            id="hero-btn-ver-fotos-videos"
-            onClick={() => scrollToSection('#fotos')}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white border border-white/35 hover:border-white hover:bg-white/10 rounded-sm backdrop-blur-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
-          >
-            <Images className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span>Galeria</span>
-          </button>
+          {((data.photos && data.photos.length > 0) || (data.videos && data.videos.length > 0)) && (
+            <button
+              id="hero-btn-ver-fotos-videos"
+              onClick={() => scrollToSection(data.photos && data.photos.length > 0 ? '#fotos' : '#videos')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white border border-white/35 hover:border-white hover:bg-white/10 rounded-sm backdrop-blur-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
+            >
+              <Images className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Galeria</span>
+            </button>
+          )}
         </div>
 
         {/* Real-time Countdown Timer component */}
-        <CountdownTimer
-          targetDateString={activity.date}
-          activityName={activity.name}
-        />
+        {(activity.date || activity.countdownTarget) && (
+          <CountdownTimer
+            targetDateString={activity.date || activity.countdownTarget || ''}
+            activityName={activity.name || ''}
+          />
+        )}
       </div>
 
       {/* Down Scroll Indicator */}
