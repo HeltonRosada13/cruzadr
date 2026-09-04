@@ -177,12 +177,14 @@ export async function generateVideoThumbnailAndDuration(file: File): Promise<{
     video.onseeked = () => {
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 360;
+        canvas.width = 480;
+        canvas.height = 270;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.drawImage(video, 0, 0, 640, 360);
-          const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'medium';
+          ctx.drawImage(video, 0, 0, 480, 270);
+          const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.70);
           cleanUp();
           const durationSec = Math.round(video.duration) || 0;
           const mins = Math.floor(durationSec / 60);

@@ -20,6 +20,7 @@ interface ChurchContextType {
   updatePhoto: (id: string, updated: Partial<PhotoItem>) => void;
   removePhoto: (id: string) => void;
   addVideo: (video: Omit<VideoItem, 'id'> & { id?: string }) => void;
+  addBatchVideos: (videos: (Omit<VideoItem, 'id'> & { id?: string })[]) => void;
   updateVideo: (id: string, updated: Partial<VideoItem>) => void;
   removeVideo: (id: string) => void;
   setPrimaryFeaturedVideo: (id: string) => void;
@@ -28,7 +29,11 @@ interface ChurchContextType {
   addUpcomingEvent: (event: Omit<ChurchEvent, 'id'>) => void;
   updateUpcomingEvent: (id: string, updated: Partial<ChurchEvent>) => void;
   removeUpcomingEvent: (id: string) => void;
+  addSocialLink: (link: Omit<SocialLink, 'id'> & { id?: string }) => void;
+  addBatchSocialLinks: (links: (Omit<SocialLink, 'id'> & { id?: string })[]) => void;
   updateSocialLink: (id: string, updated: Partial<SocialLink>) => void;
+  removeSocialLink: (id: string) => void;
+  resetSocialLinksToDefaults: () => void;
   addHighlight: (item: Omit<HighlightMoment, 'id'>) => void;
   updateHighlight: (id: string, updated: Partial<HighlightMoment>) => void;
   removeHighlight: (id: string) => void;
@@ -651,6 +656,18 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     }), true);
   }, [updateStore]);
 
+  const addBatchVideos = useCallback((videosData: (Omit<VideoItem, 'id'> & { id?: string })[]) => {
+    if (!videosData || videosData.length === 0) return;
+    const newVideos: VideoItem[] = videosData.map((v, idx) => ({
+      ...v,
+      id: v.id || 'v-' + (Date.now() + idx),
+    }));
+    updateStore((prev) => ({
+      ...prev,
+      videos: [...newVideos, ...prev.videos],
+    }), true);
+  }, [updateStore]);
+
   const updateVideo = useCallback((id: string, updated: Partial<VideoItem>) => {
     updateStore((prev) => ({
       ...prev,
@@ -719,12 +736,49 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     }), true);
   }, [updateStore]);
 
+  const addSocialLink = useCallback((linkData: Omit<SocialLink, 'id'> & { id?: string }) => {
+    const newLink: SocialLink = {
+      ...linkData,
+      id: linkData.id || 'soc-' + Date.now(),
+    };
+    updateStore((prev) => ({
+      ...prev,
+      socialLinks: [...prev.socialLinks, newLink],
+    }), true);
+  }, [updateStore]);
+
+  const addBatchSocialLinks = useCallback((linksData: (Omit<SocialLink, 'id'> & { id?: string })[]) => {
+    if (!linksData || linksData.length === 0) return;
+    const newLinks: SocialLink[] = linksData.map((link, idx) => ({
+      ...link,
+      id: link.id || 'soc-' + (Date.now() + idx),
+    }));
+    updateStore((prev) => ({
+      ...prev,
+      socialLinks: [...prev.socialLinks, ...newLinks],
+    }), true);
+  }, [updateStore]);
+
   const updateSocialLink = useCallback((id: string, updated: Partial<SocialLink>) => {
     updateStore((prev) => ({
       ...prev,
       socialLinks: prev.socialLinks.map((item) =>
         item.id === id ? { ...item, ...updated } : item
       ),
+    }), true);
+  }, [updateStore]);
+
+  const removeSocialLink = useCallback((id: string) => {
+    updateStore((prev) => ({
+      ...prev,
+      socialLinks: prev.socialLinks.filter((item) => item.id !== id),
+    }), true);
+  }, [updateStore]);
+
+  const resetSocialLinksToDefaults = useCallback(() => {
+    updateStore((prev) => ({
+      ...prev,
+      socialLinks: [],
     }), true);
   }, [updateStore]);
 
@@ -880,6 +934,7 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         updatePhoto,
         removePhoto,
         addVideo,
+        addBatchVideos,
         updateVideo,
         removeVideo,
         setPrimaryFeaturedVideo,
@@ -888,7 +943,11 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
         addUpcomingEvent,
         updateUpcomingEvent,
         removeUpcomingEvent,
+        addSocialLink,
+        addBatchSocialLinks,
         updateSocialLink,
+        removeSocialLink,
+        resetSocialLinksToDefaults,
         addHighlight,
         updateHighlight,
         removeHighlight,

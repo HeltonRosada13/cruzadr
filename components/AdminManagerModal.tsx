@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
-import { PhotoItem, ChurchEvent, Testimony, CoordinationGroup } from '@/lib/types';
+import { PhotoItem, ChurchEvent, Testimony, CoordinationGroup, SocialLink, SocialPlatform } from '@/lib/types';
 import { saveHeroVideoBlob, clearHeroVideoBlob, saveVideoFileBlob, generateVideoThumbnailAndDuration } from '@/lib/videoStorage';
 import { processAndOptimizeImage } from '@/lib/imageUtils';
 import { AdminHighlightsTab } from '@/components/AdminHighlightsTab';
@@ -57,7 +57,12 @@ import {
   Quote,
   MessageSquareHeart,
   Users,
-  MessageSquare
+  MessageSquare,
+  Search,
+  Send,
+  Radio,
+  Music2,
+  Headphones
 } from 'lucide-react';
 
 export function AdminManagerModal() {
@@ -86,6 +91,7 @@ function AdminManagerModalInner() {
     addBatchPhotos,
     removePhoto,
     addVideo,
+    addBatchVideos,
     removeVideo,
     setPrimaryFeaturedVideo,
     resetVideosToDefaults,
@@ -93,7 +99,11 @@ function AdminManagerModalInner() {
     addUpcomingEvent,
     updateUpcomingEvent,
     removeUpcomingEvent,
+    addSocialLink,
+    addBatchSocialLinks,
     updateSocialLink,
+    removeSocialLink,
+    resetSocialLinksToDefaults,
     resetToDefaults,
     addHighlight,
     updateHighlight,
@@ -152,6 +162,31 @@ function AdminManagerModalInner() {
   const [setAsFeaturedImmediately, setSetAsFeaturedImmediately] = useState(true);
   const [replaceOldVideosOnUpload, setReplaceOldVideosOnUpload] = useState(false);
   const [setAsHeroVideoOnUpload, setSetAsHeroVideoOnUpload] = useState(true);
+  const [batchYouTubeUrls, setBatchYouTubeUrls] = useState('');
+  const [isProcessingBatchYouTube, setIsProcessingBatchYouTube] = useState(false);
+  const [videoSearchQuery, setVideoSearchQuery] = useState('');
+
+  // Social Links & Digital Channels States
+  const [newSocialForm, setNewSocialForm] = useState<{
+    platform: SocialPlatform;
+    name: string;
+    handle: string;
+    url: string;
+    description: string;
+    badgeText: string;
+  }>({
+    platform: 'WhatsApp',
+    name: '',
+    handle: '',
+    url: '',
+    description: '',
+    badgeText: '',
+  });
+  const [editingSocialId, setEditingSocialId] = useState<string | null>(null);
+  const [editingSocialForm, setEditingSocialForm] = useState<SocialLink | null>(null);
+  const [batchSocialUrls, setBatchSocialUrls] = useState('');
+  const [isProcessingBatchSocial, setIsProcessingBatchSocial] = useState(false);
+  const [socialSearchQuery, setSocialSearchQuery] = useState('');
 
   // Photo / Image Upload States & File Input Refs
   const photoFileInputRef = useRef<HTMLInputElement>(null);
@@ -653,12 +688,13 @@ function AdminManagerModalInner() {
     }
   };
 
-  // Handler for Batch / Multiple Video Files Upload
+  // Handler for Batch / Multiple Video Files Upload (Supports unlimited videos: >10, >20, >50)
   const handleProcessBatchGalleryVideoFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     try {
       setIsBatchVideoUploading(true);
-      let successCount = 0;
+      const batchVideosToSave: (Omit<import('@/lib/types').VideoItem, 'id'> & { id?: string })[] = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setBatchVideoUploadProgress(`A processar vídeo ${i + 1} de ${files.length}: ${file.name}...`);
@@ -672,7 +708,7 @@ function AdminManagerModalInner() {
           const videoId = 'v-' + Date.now().toString() + '-' + i;
           const blobUrl = await saveVideoFileBlob(videoId, file);
 
-          addVideo({
+          batchVideosToSave.push({
             id: videoId,
             title: cleanTitle || `Vídeo da Atividade #${data.videos.length + i + 1}`,
             description: 'Registo em vídeo da igreja catedral de amor e fé',
@@ -686,11 +722,10 @@ function AdminManagerModalInner() {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('gallery-video-updated', { detail: { id: videoId, blobUrl } }));
           }
-          successCount++;
         } else if (file.type.startsWith('image/')) {
-          const imgRes = await processAndOptimizeImage(file, 1280, 720, 0.85);
+          const imgRes = await processAndOptimizeImage(file, 480, 270, 0.75);
           const videoId = 'v-' + Date.now().toString() + '-' + i;
-          addVideo({
+          batchVideosToSave.push({
             id: videoId,
             title: cleanTitle || `Momento em Vídeo #${data.videos.length + i + 1}`,
             description: 'Registo em destaque',
@@ -700,12 +735,13 @@ function AdminManagerModalInner() {
             category: 'Destaques',
             date: 'Atividade Oficial',
           });
-          successCount++;
         }
       }
-      if (successCount > 0) {
-        syncNowWithCloud();
-        showNotification(`${successCount} vídeos foram adicionados à galeria com sucesso e salvos!`);
+
+      if (batchVideosToSave.length > 0) {
+        addBatchVideos(batchVideosToSave);
+        await syncNowWithCloud();
+        showNotification(`${batchVideosToSave.length} vídeos foram adicionados à galeria e salvos com sucesso! Total: ${data.videos.length + batchVideosToSave.length}`);
       }
     } catch (err) {
       console.error('Error batch processing videos:', err);
@@ -713,6 +749,57 @@ function AdminManagerModalInner() {
     } finally {
       setIsBatchVideoUploading(false);
       setBatchVideoUploadProgress(null);
+    }
+  };
+
+  // Handler for Batch YouTube Links (Allows pasting 5, 10, 20 or more YouTube links at once)
+  const handleBatchYouTubeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchYouTubeUrls.trim()) {
+      showNotification('Por favor cole um ou mais links do YouTube.');
+      return;
+    }
+
+    try {
+      setIsProcessingBatchYouTube(true);
+      const lines = batchYouTubeUrls
+        .split(/[\n,;]+/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      const newBatchItems: (Omit<import('@/lib/types').VideoItem, 'id'> & { id?: string })[] = [];
+
+      lines.forEach((line, idx) => {
+        const ytId = extractYouTubeId(line);
+        if (ytId) {
+          const videoId = 'v-yt-' + Date.now() + '-' + idx;
+          newBatchItems.push({
+            id: videoId,
+            title: `Vídeo Oficial do YouTube #${data.videos.length + idx + 1}`,
+            description: 'Transmissão e registo oficial da igreja',
+            videoUrl: `https://www.youtube.com/watch?v=${ytId}`,
+            thumbnailUrl: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
+            duration: '15:00 min',
+            category: 'Destaques',
+            date: 'Atividade Oficial',
+          });
+        }
+      });
+
+      if (newBatchItems.length === 0) {
+        showNotification('Nenhum link de YouTube válido foi detectado. Certifique-se de que são links do tipo https://www.youtube.com/watch?v=... ou https://youtu.be/...');
+        return;
+      }
+
+      addBatchVideos(newBatchItems);
+      await syncNowWithCloud();
+      setBatchYouTubeUrls('');
+      showNotification(`${newBatchItems.length} novos vídeos do YouTube foram adicionados e salvos na galeria! Total agora: ${data.videos.length + newBatchItems.length}`);
+    } catch (err) {
+      console.error('Error batch importing YouTube links:', err);
+      showNotification('Erro ao importar vídeos do YouTube.');
+    } finally {
+      setIsProcessingBatchYouTube(false);
     }
   };
 
@@ -1161,13 +1248,14 @@ function AdminManagerModalInner() {
             { id: 'events', label: `Próximas Atividades (${data.upcomingEvents.length})`, icon: Calendar },
             { id: 'coordinations', label: `Coordenações (${data.coordinations?.length || 0})`, icon: Users },
             { id: 'testimonies', label: `Testemunhos (${data.testimonies?.length || 0})`, icon: MessageSquareHeart },
-            { id: 'social', label: 'Redes Sociais & Links', icon: Share2 },
+            { id: 'social', label: `Redes Sociais & Links (${data.socialLinks?.length || 0})`, icon: Share2 },
             { id: 'cloud', label: 'Nuvem & Vercel', icon: Globe },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
+                id={`admin-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest whitespace-nowrap transition-all cursor-pointer ${
                   activeTab === tab.id
@@ -2121,7 +2209,59 @@ function AdminManagerModalInner() {
                 </div>
               </div>
 
-              {/* VIDEO DETAILS FORM */}
+              {/* BATCH YOUTUBE IMPORTER FORM (ALLOWS >10, >20 VIDEOS AT ONCE) */}
+              <form onSubmit={handleBatchYouTubeSubmit} className="p-5 rounded-sm bg-neutral-50 border border-neutral-200 space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+                  <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
+                    <Film className="w-4 h-4 text-red-600" /> Publicar Vários Links do YouTube de Uma Só Vez (Lote)
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#C5A059] uppercase tracking-wider bg-[#C5A059]/10 px-2 py-0.5 rounded">
+                    Mais de 10 Vídeos Suportados
+                  </span>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">
+                      Cole os Links do YouTube (1 link por linha)
+                    </label>
+                    <span className="text-[10px] text-neutral-400">
+                      Ex: https://www.youtube.com/watch?v=... ou https://youtu.be/...
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={batchYouTubeUrls}
+                    onChange={(e) => setBatchYouTubeUrls(e.target.value)}
+                    placeholder={`https://www.youtube.com/watch?v=ScMzIvxBSi4\nhttps://www.youtube.com/watch?v=ysz5S6PUM-U\nhttps://youtu.be/dQw4w9WgXcQ\nCole quantos links desejar (10, 20, 50 vídeos)...`}
+                    className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs font-mono text-neutral-900 focus:outline-none focus:border-black resize-y"
+                  />
+                  <p className="text-[11px] text-neutral-500 mt-1 font-light">
+                    O sistema extrai automaticamente o ID, gera a miniatura oficial em alta resolução e publica todos os vídeos diretamente na galeria do site.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-neutral-500 font-medium">
+                    {batchYouTubeUrls.split(/[\n,;]+/).filter((l) => l.trim()).length} link(s) digitado(s)
+                  </span>
+                  <button
+                    type="submit"
+                    id="btn-publicar-lote-youtube"
+                    disabled={isProcessingBatchYouTube || !batchYouTubeUrls.trim()}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
+                  >
+                    {isProcessingBatchYouTube ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    ) : (
+                      <Film className="w-4 h-4 text-white" />
+                    )}
+                    <span>{isProcessingBatchYouTube ? 'A Publicar Lote...' : 'Publicar Todos os Vídeos em Lote'}</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* VIDEO DETAILS FORM (SINGLE VIDEO) */}
               <form onSubmit={handleAddVideoSubmit} className="p-5 rounded-sm bg-neutral-50 border border-neutral-200 space-y-4">
                 <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
                   <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-widest flex items-center gap-2">
@@ -2275,14 +2415,19 @@ function AdminManagerModalInner() {
                       <span>Exibir também no Hero (Vídeo Principal do Cabeçalho da Página)</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-neutral-700">
+                    <label className="flex items-start gap-2 cursor-pointer select-none text-xs text-neutral-700">
                       <input
                         type="checkbox"
                         checked={replaceOldVideosOnUpload}
                         onChange={(e) => setReplaceOldVideosOnUpload(e.target.checked)}
-                        className="rounded text-[#C5A059] focus:ring-0 cursor-pointer"
+                        className="rounded text-[#C5A059] focus:ring-0 cursor-pointer mt-0.5"
                       />
-                      <span>Substituir galeria anterior (manter apenas este vídeo novo como destaque único)</span>
+                      <div>
+                        <span>Substituir galeria anterior (manter apenas este vídeo novo como destaque único)</span>
+                        <p className="text-[10px] text-neutral-500 font-light">
+                          Deixe <strong>desmarcado</strong> para acumular e somar vídeos ilimitadamente (mais de 10, 20 ou 50 vídeos).
+                        </p>
+                      </div>
                     </label>
                   </div>
                 </div>
@@ -2302,9 +2447,14 @@ function AdminManagerModalInner() {
               {/* Video List */}
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-                    Vídeos na Galeria do Site ({data.videos.length})
-                  </h4>
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-900 flex items-center gap-2">
+                      Vídeos na Galeria do Site ({data.videos.length})
+                      <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold uppercase">
+                        Ilimitado (10+ vídeos)
+                      </span>
+                    </h4>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -2330,6 +2480,28 @@ function AdminManagerModalInner() {
                   </div>
                 </div>
 
+                {/* Quick Search for Admin when there are many videos */}
+                {data.videos.length > 4 && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={`Pesquisar entre os ${data.videos.length} vídeos publicados...`}
+                      value={videoSearchQuery}
+                      onChange={(e) => setVideoSearchQuery(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white border border-neutral-200 rounded-sm focus:outline-none focus:border-black"
+                    />
+                    {videoSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setVideoSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {data.videos.length === 0 ? (
                   <div className="p-6 text-center bg-neutral-50 rounded-sm border border-neutral-200">
                     <p className="text-xs text-neutral-500 mb-3">Nenhum vídeo publicado no momento.</p>
@@ -2342,8 +2514,14 @@ function AdminManagerModalInner() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {data.videos.map((vid, index) => {
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+                    {data.videos
+                      .filter((v) => {
+                        if (!videoSearchQuery.trim()) return true;
+                        const q = videoSearchQuery.toLowerCase();
+                        return v.title.toLowerCase().includes(q) || v.description.toLowerCase().includes(q);
+                      })
+                      .map((vid, index) => {
                       const isFeatured = index === 0;
                       return (
                         <div
@@ -3787,316 +3965,793 @@ function AdminManagerModalInner() {
 
           {/* TAB 5: REDES SOCIAIS & LINKS */}
           {activeTab === 'social' && (
-            <div className="space-y-4">
-              <div className="p-3.5 rounded-sm bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 font-light flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span>
-                  Configure os canais digitais e links oficiais da igreja. Use os botões de <strong>Validação</strong> e <strong>Teste em Tempo Real</strong> para garantir que os links estão corretos e prontos para os visitantes.
-                </span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await syncNowWithCloud();
-                    showNotification('Todos os links e redes sociais foram validados e sincronizados com sucesso!');
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1A1A] hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all whitespace-nowrap self-start sm:self-auto cursor-pointer shadow-xs"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Validar e Sincronizar Tudo</span>
-                </button>
+            <div className="space-y-6">
+              {/* Header Info & Sync */}
+              <div className="p-4 rounded-sm bg-neutral-50 border border-neutral-200 text-xs text-neutral-600 font-light flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-neutral-900 text-sm mb-1 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-[#C5A059]" />
+                    <span>Canais Digitais & Redes Sociais Oficiais</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#C5A059]/20 text-[#8c6b2d] text-[10px] font-bold">
+                      {data.socialLinks?.length || 0} canais publicados
+                    </span>
+                  </h3>
+                  <p className="text-neutral-500 text-[11px]">
+                    Cadastre múltiplos canais para a igreja: vários números de WhatsApp (Secretaria, Pastores, Intercessão), Instagram, YouTube, Facebook, TikTok, Spotify, Telegram e Web. Todos aparecem para os visitantes e são salvos na nuvem.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await syncNowWithCloud();
+                      showNotification('Todos os links e canais digitais foram sincronizados com sucesso!');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1A1A] hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-sm transition-all whitespace-nowrap cursor-pointer shadow-xs"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Sincronizar Tudo</span>
+                  </button>
+                  {data.socialLinks && data.socialLinks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Tem certeza de que deseja remover todos os canais digitais? O site ficará sem redes sociais até que adicione novas.')) {
+                          resetSocialLinksToDefaults();
+                          showNotification('Todos os canais digitais foram removidos.');
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-sm border border-red-200 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Limpar Todos</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {data.socialLinks.map((social) => {
-                const isWhatsApp = social.platform === 'WhatsApp' || social.id === 'soc-whatsapp';
-
-                if (isWhatsApp) {
-                  const rawNum = social.handle || data.whatsappNumber || '';
-                  const cleanNum = rawNum.replace(/\D/g, '');
-                  const directUrl = cleanNum 
-                    ? `https://wa.me/${cleanNum}${data.whatsappMessage ? `?text=${encodeURIComponent(data.whatsappMessage)}` : ''}`
-                    : '';
-                  const isValidWhatsApp = cleanNum.length >= 8;
-
-                  return (
-                    <div
-                      key={social.id}
-                      className="p-4 rounded-sm bg-emerald-50/50 border border-emerald-300/80 space-y-3"
+              {/* Quick Preset Buttons */}
+              <div className="p-3 bg-white border border-neutral-200 rounded-sm">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">
+                  Atalhos Rápidos para Criar Canais Populares:
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { platform: 'WhatsApp' as SocialPlatform, label: '+ WhatsApp', defaultName: 'WhatsApp da Igreja', badge: 'Atendimento', desc: 'Atendimento direto com a equipe pastoral e secretaria' },
+                    { platform: 'Instagram' as SocialPlatform, label: '+ Instagram', defaultName: 'Instagram Oficial', badge: 'Oficial', desc: 'Fotos, transmissões e avisos diários' },
+                    { platform: 'YouTube' as SocialPlatform, label: '+ YouTube', defaultName: 'YouTube - Cultos Ao Vivo', badge: 'Ao Vivo', desc: 'Transmissões ao vivo dos cultos e mensagens' },
+                    { platform: 'Facebook' as SocialPlatform, label: '+ Facebook', defaultName: 'Facebook Oficial', badge: 'Oficial', desc: 'Acompanhe novidades e publicações da igreja' },
+                    { platform: 'TikTok' as SocialPlatform, label: '+ TikTok', defaultName: 'TikTok Oficial', badge: 'Vídeos', desc: 'Vídeos curtos, mensagens e momentos inspiradores' },
+                    { platform: 'Spotify' as SocialPlatform, label: '+ Spotify / Podcast', defaultName: 'Spotify - Mensagens & Louvores', badge: 'Áudio', desc: 'Ouça mensagens bíblicas e louvores em qualquer lugar' },
+                    { platform: 'Telegram' as SocialPlatform, label: '+ Telegram', defaultName: 'Canal Oficial Telegram', badge: 'Devocionais', desc: 'Devocionais diários, estudos bíblicos e avisos' },
+                    { platform: 'Website' as SocialPlatform, label: '+ Site / Portal', defaultName: 'Portal Oficial', badge: 'Web', desc: 'Portal oficial da Catedral de Amor e Fé' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setNewSocialForm({
+                          platform: preset.platform,
+                          name: preset.defaultName,
+                          handle: preset.platform === 'WhatsApp' ? (data.whatsappNumber || '+244 ') : '@',
+                          url: '',
+                          description: preset.desc,
+                          badgeText: preset.badge,
+                        });
+                        showNotification(`Formulário preenchido para ${preset.platform}. Insira o link ou telefone e clique em Adicionar!`);
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-medium bg-neutral-100 hover:bg-[#C5A059]/15 hover:text-[#8c6b2d] hover:border-[#C5A059]/40 border border-neutral-200 rounded-sm text-neutral-700 transition-colors"
                     >
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                            <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                          </div>
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-950">
-                            {social.name} ({social.platform})
-                          </h4>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isValidWhatsApp ? (
-                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
-                              <Check className="w-2.5 h-2.5 text-emerald-600" />
-                              Número Válido ({cleanNum.length} dígitos)
-                            </span>
-                          ) : (
-                            <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-amber-300 flex items-center gap-1">
-                              <AlertCircle className="w-2.5 h-2.5 text-amber-600" />
-                              Requer Número Completo
-                            </span>
-                          )}
-                          <span className="text-[9px] bg-emerald-100/80 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-200">
-                            Direcionamento Direto
-                          </span>
-                        </div>
-                      </div>
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                      <div className="p-2.5 bg-white/90 rounded-sm border border-emerald-200 text-[11px] text-emerald-900 font-light leading-relaxed">
-                        ✨ <strong>Não é necessário digitar link/URL.</strong> Apenas digite o número de telefone com código do país (ex: <strong>+244</strong> para Angola). Quando o visitante clicar em &quot;ACESSAR&quot; no site, abrirá a conversa instantânea no WhatsApp.
-                      </div>
+              {/* Form 1: Adicionar Novo Canal Individual */}
+              <div className="p-4 rounded-sm bg-white border border-neutral-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900 flex items-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5 text-[#C5A059]" />
+                    <span>Cadastrar Novo Canal Digital ou Rede Social</span>
+                  </h4>
+                  <span className="text-[10px] text-neutral-400">Você pode adicionar quantos canais desejar</span>
+                </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-800 block mb-1">
-                            Número de Telefone do WhatsApp (com DDI e DDD) *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ex: +244 923 847 110"
-                            value={social.handle || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const digits = val.replace(/\D/g, '');
-                              const newUrl = digits 
-                                ? `https://wa.me/${digits}${data.whatsappMessage ? `?text=${encodeURIComponent(data.whatsappMessage)}` : ''}` 
-                                : '';
-                              updateSocialLink(social.id, { handle: val, url: newUrl });
-                              updateChurchInfo({ whatsappNumber: val });
-                              setChurchForm((prev) => ({ ...prev, whatsappNumber: val }));
-                            }}
-                            className="w-full px-3 py-2 rounded-sm bg-white border border-emerald-300 text-xs text-neutral-900 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 font-medium"
-                          />
-                          <span className="text-[10px] text-neutral-500 mt-1 block">
-                            Dígitos de direcionamento: <strong className="font-mono text-emerald-800">{cleanNum || 'Nenhum número'}</strong>
-                          </span>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-800 block mb-1">
-                            Mensagem Inicial Padrão ao Iniciar Conversa (Opcional)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Ex: Olá! Gostaria de falar com a Catedral de Amor e Fé"
-                            value={data.whatsappMessage || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const newUrl = cleanNum 
-                                ? `https://wa.me/${cleanNum}${val ? `?text=${encodeURIComponent(val)}` : ''}` 
-                                : '';
-                              updateSocialLink(social.id, { url: newUrl });
-                              updateChurchInfo({ whatsappMessage: val });
-                              setChurchForm((prev) => ({ ...prev, whatsappMessage: val }));
-                            }}
-                            className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-emerald-600"
-                          />
-                          <span className="text-[10px] text-neutral-500 mt-1 block">
-                            Texto pronto sugerido ao visitante ao abrir o WhatsApp
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Live Generated Direct URL Preview & Validation Actions */}
-                      <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-emerald-200">
-                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-900 truncate flex-1 min-w-0">
-                          <span className="font-bold text-[10px] uppercase tracking-wider flex-shrink-0">Destino Direto:</span>
-                          <code className="bg-white px-2 py-0.5 rounded text-[11px] text-emerald-950 font-mono border border-emerald-200 truncate">
-                            {directUrl || 'Aguardando número de telefone...'}
-                          </code>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!cleanNum || cleanNum.length < 8) {
-                                alert('Por favor, digite um número de WhatsApp válido com código do país (DDI).');
-                                return;
-                              }
-                              showNotification('Número de WhatsApp validado e configurado perfeitamente!');
-                            }}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-2.5 py-1.5 rounded-sm transition-colors cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                            <span>Validar</span>
-                          </button>
-
-                          {directUrl && (
-                            <a
-                              href={directUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap shadow-xs"
-                            >
-                              <span>Testar Abertura Direta</span>
-                              <ExternalLink className="w-3 h-3 text-white" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Generic Social Networks & Official Channels Validation
-                const urlVal = (social.url || '').trim();
-                let isValidUrl = false;
-                let formattedUrl = urlVal;
-
-                if (urlVal) {
-                  try {
-                    const testUrl = urlVal.startsWith('http://') || urlVal.startsWith('https://') 
-                      ? urlVal 
-                      : `https://${urlVal}`;
-                    const parsed = new URL(testUrl);
-                    isValidUrl = parsed.hostname.includes('.') && parsed.hostname.length > 3;
-                    formattedUrl = testUrl;
-                  } catch {
-                    isValidUrl = false;
-                  }
-                }
-
-                const handleFormatAndValidateUrl = () => {
-                  if (!urlVal) {
-                    alert(`Por favor, insira o link oficial do ${social.platform}.`);
-                    return;
-                  }
-                  let validFormatted = urlVal;
-                  if (!validFormatted.startsWith('http://') && !validFormatted.startsWith('https://')) {
-                    validFormatted = `https://${validFormatted}`;
-                  }
-                  try {
-                    const parsed = new URL(validFormatted);
-                    if (parsed.hostname.includes('.') && parsed.hostname.length > 3) {
-                      updateSocialLink(social.id, { url: validFormatted });
-                      showNotification(`Link do ${social.name} validado com sucesso: ${validFormatted}`);
-                    } else {
-                      alert(`O link inserido não parece ser um endereço web válido.`);
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newSocialForm.name.trim()) {
+                      alert('Por favor, informe o nome do canal (ex: WhatsApp Gabinete Pastoral, Instagram Oficial).');
+                      return;
                     }
-                  } catch {
-                    alert(`O link "${urlVal}" é inválido. Por favor, verifique o formato.`);
-                  }
-                };
+                    if (!newSocialForm.url.trim() && !newSocialForm.handle.trim()) {
+                      alert('Por favor, informe o Link (URL) ou o número de WhatsApp.');
+                      return;
+                    }
 
-                return (
-                  <div
-                    key={social.id}
-                    className={`p-4 rounded-sm border space-y-3 transition-colors ${
-                      isValidUrl 
-                        ? 'bg-neutral-50/80 border-neutral-200' 
-                        : 'bg-amber-50/30 border-amber-200/80'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[10px] font-bold">
-                          {social.platform.charAt(0)}
-                        </div>
-                        <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
-                          {social.name} ({social.platform})
-                        </h4>
-                      </div>
+                    let finalUrl = newSocialForm.url.trim();
+                    if (newSocialForm.platform === 'WhatsApp') {
+                      const rawDigits = (newSocialForm.handle || finalUrl).replace(/\D/g, '');
+                      if (rawDigits && !finalUrl.startsWith('http')) {
+                        finalUrl = `https://wa.me/${rawDigits}`;
+                      }
+                    } else if (finalUrl && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                      finalUrl = `https://${finalUrl}`;
+                    }
 
-                      <div className="flex items-center gap-2">
-                        {isValidUrl ? (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
-                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                            Link Válido & Ativo
-                          </span>
-                        ) : urlVal ? (
-                          <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border border-amber-300 flex items-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                            Formato Incompleto
-                          </span>
-                        ) : (
-                          <span className="text-[9px] bg-neutral-200 text-neutral-600 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
-                            Sem Link Configurado
-                          </span>
-                        )}
-                        <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">{social.handle}</span>
-                      </div>
+                    addSocialLink({
+                      platform: newSocialForm.platform,
+                      name: newSocialForm.name.trim(),
+                      handle: newSocialForm.handle.trim() || (newSocialForm.platform === 'WhatsApp' ? finalUrl : '@oficial'),
+                      url: finalUrl,
+                      description: newSocialForm.description.trim(),
+                      badgeText: newSocialForm.badgeText.trim() || 'Oficial',
+                    });
+
+                    const addedName = newSocialForm.name;
+                    setNewSocialForm({
+                      platform: 'WhatsApp',
+                      name: '',
+                      handle: '',
+                      url: '',
+                      description: '',
+                      badgeText: '',
+                    });
+                    showNotification(`Canal "${addedName}" adicionado com sucesso!`);
+                  }}
+                  className="space-y-3"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                        Plataforma *
+                      </label>
+                      <select
+                        value={newSocialForm.platform}
+                        onChange={(e) => {
+                          const p = e.target.value as SocialPlatform;
+                          setNewSocialForm((prev) => ({
+                            ...prev,
+                            platform: p,
+                            name: prev.name || (p === 'WhatsApp' ? 'WhatsApp da Igreja' : `${p} Oficial`),
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900 font-medium"
+                      >
+                        <option value="WhatsApp">WhatsApp (Atendimento / Grupos)</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Spotify">Spotify / Podcast</option>
+                        <option value="Telegram">Telegram</option>
+                        <option value="Website">Site / Portal Oficial</option>
+                        <option value="Rádio">Rádio Online / Web Rádio</option>
+                        <option value="X">X (Twitter)</option>
+                        <option value="Outro">Outro Link Personalizado</option>
+                      </select>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
-                            Link URL Oficial *
-                          </label>
-                          <span className="text-[9px] text-neutral-400">Ex: https://instagram.com/sua_igreja</span>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder={`Ex: https://${social.platform.toLowerCase()}.com/catedraldeamorefe`}
-                          value={social.url || ''}
-                          onChange={(e) => updateSocialLink(social.id, { url: e.target.value })}
-                          className={`w-full px-3 py-2 rounded-sm bg-white border text-xs text-neutral-900 focus:outline-none ${
-                            isValidUrl 
-                              ? 'border-neutral-300 focus:border-neutral-900' 
-                              : 'border-amber-300 focus:border-amber-500'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
-                            Identificador / Handle / Nome de Usuário
-                          </label>
-                          <span className="text-[9px] text-neutral-400">Ex: @catedraldeamorefe</span>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Ex: @catedraldeamorefe ou Canal Oficial"
-                          value={social.handle || ''}
-                          onChange={(e) => updateSocialLink(social.id, { handle: e.target.value })}
-                          className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Action & Verification Row */}
-                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-200/80">
-                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 truncate flex-1 min-w-0">
-                        <span className="font-bold text-[10px] uppercase tracking-wider flex-shrink-0 text-neutral-800">Destino ao Clicar:</span>
-                        <code className="bg-white px-2 py-0.5 rounded text-[11px] text-neutral-900 font-mono border border-neutral-200 truncate">
-                          {formattedUrl || 'Nenhum link adicionado ainda'}
-                        </code>
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={handleFormatAndValidateUrl}
-                          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-800 bg-white hover:bg-neutral-100 border border-neutral-300 px-2.5 py-1.5 rounded-sm transition-colors cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-3 h-3 text-neutral-700" />
-                          <span>Validar Link</span>
-                        </button>
-
-                        {formattedUrl && isValidUrl && (
-                          <a
-                            href={formattedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white bg-[#1A1A1A] hover:bg-black px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap shadow-xs"
-                          >
-                            <span>Testar Link</span>
-                            <ExternalLink className="w-3 h-3 text-white" />
-                          </a>
-                        )}
-                      </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                        Nome do Canal / Rede *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: WhatsApp - Gabinete Pastoral, Instagram Jovens, Cultos Ao Vivo YouTube"
+                        value={newSocialForm.name}
+                        onChange={(e) => setNewSocialForm({ ...newSocialForm, name: e.target.value })}
+                        required
+                        className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
+                          Link Oficial (URL) {newSocialForm.platform === 'WhatsApp' ? 'ou wa.me/' : '*'}
+                        </label>
+                        <span className="text-[9px] text-neutral-400">
+                          {newSocialForm.platform === 'WhatsApp' ? 'Link ou https://wa.me/244...' : 'https://...'}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={
+                          newSocialForm.platform === 'WhatsApp'
+                            ? 'https://wa.me/244923847110 ou link de grupo'
+                            : 'https://...'
+                        }
+                        value={newSocialForm.url}
+                        onChange={(e) => setNewSocialForm({ ...newSocialForm, url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block">
+                          Identificador / @handle / Telefone
+                        </label>
+                        <span className="text-[9px] text-neutral-400">Exibido nos cartões</span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={
+                          newSocialForm.platform === 'WhatsApp'
+                            ? '+244 923 847 110'
+                            : '@catedraldeamorefe'
+                        }
+                        value={newSocialForm.handle}
+                        onChange={(e) => setNewSocialForm({ ...newSocialForm, handle: e.target.value })}
+                        className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                        Descrição Breve (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Atendimento pastoral, pedidos de oração e aconselhamento"
+                        value={newSocialForm.description}
+                        onChange={(e) => setNewSocialForm({ ...newSocialForm, description: e.target.value })}
+                        className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                        Etiqueta / Badge (Ex: Oficial, Ao Vivo)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Oficial, Ao Vivo, 24h, Juventude"
+                        value={newSocialForm.badgeText}
+                        onChange={(e) => setNewSocialForm({ ...newSocialForm, badgeText: e.target.value })}
+                        className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1A1A1A] hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-all cursor-pointer shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <span>Adicionar Canal Digital</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Form 2: Adicionar Vários Links em Lote (Batch Import) */}
+              <div className="p-4 rounded-sm bg-neutral-50/80 border border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#C5A059] text-white flex items-center justify-center">
+                      <Share2 className="w-3 h-3" />
+                    </div>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-900">
+                      Publicar Vários Links em Lote (Importação em Massa)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] text-neutral-500 font-medium">
+                    Cole múltiplos links (1 por linha)
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-neutral-600 font-light">
+                  Cole vários links ou números de telefone abaixo (um em cada linha). O sistema detecta automaticamente se é WhatsApp, Instagram, YouTube, Facebook, TikTok, Spotify, Telegram ou Site e adiciona todos de uma vez só!
+                </p>
+
+                <textarea
+                  rows={4}
+                  placeholder={`https://wa.me/244923847110\nhttps://instagram.com/catedraldeamorefe\nhttps://youtube.com/@catedraldeamorefe\nhttps://facebook.com/catedraldeamorefe\nhttps://tiktok.com/@catedraldeamorefe\nhttps://t.me/catedraldeamorefe\nhttps://catedraldeamorefe.org`}
+                  value={batchSocialUrls}
+                  onChange={(e) => setBatchSocialUrls(e.target.value)}
+                  className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs font-mono text-neutral-900 focus:outline-none focus:border-neutral-900 leading-relaxed"
+                />
+
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                  <div className="text-[10px] text-neutral-500">
+                    Exemplo: Links de grupos de WhatsApp, perfis sociais ou canais de vídeo.
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isProcessingBatchSocial || !batchSocialUrls.trim()}
+                    onClick={() => {
+                      if (!batchSocialUrls.trim()) {
+                        alert('Por favor, cole pelo menos um link ou número de WhatsApp.');
+                        return;
+                      }
+
+                      setIsProcessingBatchSocial(true);
+                      try {
+                        const lines = batchSocialUrls
+                          .split('\n')
+                          .map((l) => l.trim())
+                          .filter((l) => l.length > 0);
+
+                        if (lines.length === 0) {
+                          alert('Nenhum link válido encontrado nas linhas inseridas.');
+                          setIsProcessingBatchSocial(false);
+                          return;
+                        }
+
+                        const newLinks: (Omit<SocialLink, 'id'> & { id?: string })[] = [];
+
+                        lines.forEach((line, idx) => {
+                          let platform: SocialPlatform = 'Website';
+                          let name = '';
+                          let handle = '';
+                          let url = line;
+                          let description = '';
+                          let badgeText = 'Oficial';
+
+                          const lower = line.toLowerCase();
+
+                          if (lower.includes('wa.me') || lower.includes('whatsapp') || /^\+?\d[\d\s-]{6,}$/.test(line)) {
+                            platform = 'WhatsApp';
+                            const digits = line.replace(/\D/g, '');
+                            url = digits ? `https://wa.me/${digits}` : line;
+                            handle = line.startsWith('http') ? (digits ? `+${digits}` : line) : line;
+                            name = `WhatsApp Oficial ${data.socialLinks.length + idx + 1}`;
+                            description = 'Atendimento e contato direto com a Catedral de Amor e Fé';
+                            badgeText = 'Atendimento';
+                          } else if (lower.includes('instagram.com')) {
+                            platform = 'Instagram';
+                            const match = line.match(/instagram\.com\/([a-zA-Z0-9_.-]+)/);
+                            handle = match ? `@${match[1]}` : '@catedraldeamorefe';
+                            name = 'Instagram Oficial';
+                            description = 'Fotos, transmissões, bastidores e avisos diários da igreja';
+                          } else if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
+                            platform = 'YouTube';
+                            const match = line.match(/youtube\.com\/(@?[a-zA-Z0-9_.-]+)/);
+                            handle = match ? match[1] : 'Canal Oficial';
+                            name = 'YouTube - Cultos Ao Vivo';
+                            description = 'Assista às nossas transmissões ao vivo, mensagens bíblicas e louvores';
+                            badgeText = 'Ao Vivo';
+                          } else if (lower.includes('facebook.com') || lower.includes('fb.com') || lower.includes('fb.watch')) {
+                            platform = 'Facebook';
+                            name = 'Facebook Oficial';
+                            handle = 'Página da Catedral';
+                            description = 'Acompanhe novidades, eventos e transmissões oficiais';
+                          } else if (lower.includes('tiktok.com')) {
+                            platform = 'TikTok';
+                            const match = line.match(/tiktok\.com\/(@[a-zA-Z0-9_.-]+)/);
+                            handle = match ? match[1] : '@catedraldeamorefe';
+                            name = 'TikTok Oficial';
+                            description = 'Vídeos curtos, mensagens de fé e momentos inspiradores';
+                          } else if (lower.includes('spotify.com')) {
+                            platform = 'Spotify';
+                            name = 'Spotify & Podcasts';
+                            handle = 'Catedral Play';
+                            description = 'Ouça mensagens bíblicas e louvores em qualquer lugar';
+                            badgeText = 'Podcasts';
+                          } else if (lower.includes('t.me') || lower.includes('telegram')) {
+                            platform = 'Telegram';
+                            const match = line.match(/t\.me\/([a-zA-Z0-9_.-]+)/);
+                            handle = match ? `@${match[1]}` : 'Canal Oficial';
+                            name = 'Canal do Telegram';
+                            description = 'Receba devocionais diários, avisos e estudos bíblicos';
+                          } else if (lower.includes('twitter.com') || lower.includes('x.com')) {
+                            platform = 'X';
+                            const match = line.match(/(?:twitter|x)\.com\/([a-zA-Z0-9_.-]+)/);
+                            handle = match ? `@${match[1]}` : '@catedral';
+                            name = 'X (Twitter) Oficial';
+                            description = 'Reflexões e notícias rápidas da Catedral de Amor e Fé';
+                          } else if (lower.includes('radio') || lower.includes('fm')) {
+                            platform = 'Rádio';
+                            name = 'Rádio Amor e Fé Web';
+                            handle = '24 Horas no Ar';
+                            description = 'Programação gospel, orações e louvores sem interrupções';
+                            badgeText = '24 Horas';
+                          } else {
+                            platform = 'Website';
+                            name = `Portal Oficial ${data.socialLinks.length + idx + 1}`;
+                            handle = 'Link Externo';
+                            description = 'Portal oficial e informações da Catedral de Amor e Fé';
+                          }
+
+                          if (!url.startsWith('http://') && !url.startsWith('https://') && platform !== 'WhatsApp') {
+                            url = `https://${url}`;
+                          }
+
+                          newLinks.push({
+                            platform,
+                            name,
+                            handle,
+                            url,
+                            description,
+                            badgeText,
+                          });
+                        });
+
+                        addBatchSocialLinks(newLinks);
+                        setBatchSocialUrls('');
+                        showNotification(`${newLinks.length} canais digitais adicionados com sucesso em lote!`);
+                      } catch (err) {
+                        console.error(err);
+                        alert('Erro ao processar links em lote.');
+                      } finally {
+                        setIsProcessingBatchSocial(false);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                      isProcessingBatchSocial || !batchSocialUrls.trim()
+                        ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                        : 'bg-[#C5A059] hover:bg-[#b08d47] text-white shadow-xs'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isProcessingBatchSocial ? 'Adicionando...' : 'Adicionar Links em Lote'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Search & Filter Bar */}
+              {data.socialLinks && data.socialLinks.length > 0 && (
+                <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-sm border border-neutral-200">
+                  <div className="flex items-center gap-2 flex-1 max-w-sm">
+                    <Search className="w-3.5 h-3.5 text-neutral-400" />
+                    <input
+                      type="text"
+                      placeholder="Pesquisar canal por nome, @handle ou plataforma..."
+                      value={socialSearchQuery}
+                      onChange={(e) => setSocialSearchQuery(e.target.value)}
+                      className="w-full text-xs text-neutral-900 bg-transparent focus:outline-none placeholder:text-neutral-400"
+                    />
+                    {socialSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSocialSearchQuery('')}
+                        className="text-neutral-400 hover:text-neutral-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-neutral-500 font-medium">
+                    {data.socialLinks.filter((item) => {
+                      if (!socialSearchQuery.trim()) return true;
+                      const q = socialSearchQuery.toLowerCase();
+                      return (
+                        item.name.toLowerCase().includes(q) ||
+                        item.platform.toLowerCase().includes(q) ||
+                        (item.handle && item.handle.toLowerCase().includes(q)) ||
+                        (item.description && item.description.toLowerCase().includes(q))
+                      );
+                    }).length} de {data.socialLinks.length} canais
+                  </div>
+                </div>
+              )}
+
+              {/* Published Social Links List */}
+              {(!data.socialLinks || data.socialLinks.length === 0) ? (
+                <div className="p-8 text-center bg-white border border-dashed border-neutral-300 rounded-sm space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-[#C5A059]/10 text-[#C5A059] flex items-center justify-center mx-auto">
+                    <Share2 className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">
+                    Nenhum Canal ou Rede Social Publicada Ainda
+                  </h4>
+                  <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                    Como o site inicia limpo para o administrador configurar, utilize o formulário acima ou os atalhos rápidos para adicionar os canais oficiais da igreja (WhatsApp, Instagram, YouTube, etc.).
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {data.socialLinks
+                    .filter((item) => {
+                      if (!socialSearchQuery.trim()) return true;
+                      const q = socialSearchQuery.toLowerCase();
+                      return (
+                        item.name.toLowerCase().includes(q) ||
+                        item.platform.toLowerCase().includes(q) ||
+                        (item.handle && item.handle.toLowerCase().includes(q)) ||
+                        (item.description && item.description.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((social) => {
+                      const isEditing = editingSocialId === social.id;
+                      const isWhatsApp = social.platform === 'WhatsApp' || social.id === 'soc-whatsapp';
+
+                      const rawNum = social.handle || data.whatsappNumber || '';
+                      const cleanNum = rawNum.replace(/\D/g, '');
+                      const directWhatsAppUrl = cleanNum 
+                        ? `https://wa.me/${cleanNum}${data.whatsappMessage ? `?text=${encodeURIComponent(data.whatsappMessage)}` : ''}`
+                        : '';
+
+                      let targetUrl = social.url || '';
+                      if (isWhatsApp && !targetUrl) {
+                        targetUrl = directWhatsAppUrl;
+                      }
+
+                      return (
+                        <div
+                          key={social.id}
+                          className={`p-4 rounded-sm border transition-all ${
+                            isWhatsApp 
+                              ? 'bg-emerald-50/40 border-emerald-300' 
+                              : 'bg-white border-neutral-200 hover:border-neutral-300 shadow-xs'
+                          }`}
+                        >
+                          {isEditing && editingSocialForm ? (
+                            /* Inline Edit Form */
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                let finalUrl = editingSocialForm.url.trim();
+                                if (editingSocialForm.platform === 'WhatsApp') {
+                                  const rawDigits = (editingSocialForm.handle || finalUrl).replace(/\D/g, '');
+                                  if (rawDigits && !finalUrl.startsWith('http')) {
+                                    finalUrl = `https://wa.me/${rawDigits}`;
+                                  }
+                                } else if (finalUrl && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                                  finalUrl = `https://${finalUrl}`;
+                                }
+
+                                updateSocialLink(social.id, {
+                                  ...editingSocialForm,
+                                  url: finalUrl,
+                                });
+                                setEditingSocialId(null);
+                                setEditingSocialForm(null);
+                                showNotification(`Canal "${editingSocialForm.name}" atualizado com sucesso!`);
+                              }}
+                              className="space-y-3"
+                            >
+                              <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+                                <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                                  Editar Canal: {social.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingSocialId(null);
+                                    setEditingSocialForm(null);
+                                  }}
+                                  className="text-neutral-400 hover:text-neutral-600 text-xs"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Plataforma
+                                  </label>
+                                  <select
+                                    value={editingSocialForm.platform}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, platform: e.target.value as SocialPlatform })}
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-neutral-50 border border-neutral-300 text-xs font-medium"
+                                  >
+                                    <option value="WhatsApp">WhatsApp</option>
+                                    <option value="Instagram">Instagram</option>
+                                    <option value="YouTube">YouTube</option>
+                                    <option value="Facebook">Facebook</option>
+                                    <option value="TikTok">TikTok</option>
+                                    <option value="Spotify">Spotify / Podcast</option>
+                                    <option value="Telegram">Telegram</option>
+                                    <option value="Website">Site / Portal</option>
+                                    <option value="Rádio">Rádio Online</option>
+                                    <option value="X">X (Twitter)</option>
+                                    <option value="Outro">Outro</option>
+                                  </select>
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Nome do Canal *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingSocialForm.name}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, name: e.target.value })}
+                                    required
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Link URL Oficial *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingSocialForm.url}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, url: e.target.value })}
+                                    required
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs font-mono"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Identificador / @handle / Telefone
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingSocialForm.handle}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, handle: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="sm:col-span-2">
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Descrição Breve
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingSocialForm.description || ''}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, description: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 block mb-1">
+                                    Etiqueta / Badge
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingSocialForm.badgeText || ''}
+                                    onChange={(e) => setEditingSocialForm({ ...editingSocialForm, badgeText: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-sm bg-white border border-neutral-300 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingSocialId(null);
+                                    setEditingSocialForm(null);
+                                  }}
+                                  className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-900"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="submit"
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-all"
+                                >
+                                  <Save className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>Salvar Alterações</span>
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            /* Regular Card View */
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white ${
+                                    isWhatsApp ? 'bg-emerald-600' :
+                                    social.platform === 'Instagram' ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600' :
+                                    social.platform === 'YouTube' ? 'bg-red-600' :
+                                    social.platform === 'Facebook' ? 'bg-blue-600' :
+                                    social.platform === 'Spotify' ? 'bg-emerald-700' :
+                                    social.platform === 'Telegram' ? 'bg-sky-500' :
+                                    social.platform === 'TikTok' ? 'bg-neutral-900' :
+                                    'bg-[#C5A059]'
+                                  }`}>
+                                    {isWhatsApp ? <MessageCircle className="w-4 h-4 fill-current" /> :
+                                     social.platform === 'Instagram' ? <Share2 className="w-4 h-4" /> :
+                                     social.platform === 'YouTube' ? <Video className="w-4 h-4" /> :
+                                     social.platform === 'Facebook' ? <Share2 className="w-4 h-4" /> :
+                                     social.platform === 'Spotify' ? <Headphones className="w-4 h-4" /> :
+                                     social.platform === 'Telegram' ? <Send className="w-4 h-4" /> :
+                                     social.platform === 'TikTok' ? <Music2 className="w-4 h-4" /> :
+                                     <Globe className="w-4 h-4" />}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-900">
+                                        {social.name}
+                                      </h4>
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-neutral-100 text-neutral-600 font-semibold">
+                                        {social.platform}
+                                      </span>
+                                      {social.badgeText && (
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#C5A059]/15 text-[#8c6b2d] font-bold">
+                                          {social.badgeText}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[11px] text-neutral-500 font-mono">
+                                      {social.handle || 'Sem handle'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingSocialId(social.id);
+                                      setEditingSocialForm({ ...social });
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-neutral-700 bg-white hover:bg-neutral-100 border border-neutral-200 rounded-sm transition-colors"
+                                  >
+                                    <Pencil className="w-3 h-3 text-neutral-500" />
+                                    <span>Editar</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Remover o canal "${social.name}"?`)) {
+                                        removeSocialLink(social.id);
+                                        showNotification(`Canal "${social.name}" removido.`);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-sm transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>Excluir</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {social.description && (
+                                <p className="text-xs text-neutral-600 font-light bg-neutral-50/50 p-2 rounded-sm border border-neutral-100">
+                                  {social.description}
+                                </p>
+                              )}
+
+                              {/* Target URL & Live Test Link */}
+                              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-neutral-100">
+                                <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 truncate flex-1 min-w-0">
+                                  <span className="font-bold text-[10px] uppercase tracking-wider flex-shrink-0 text-neutral-800">
+                                    Link / Destino:
+                                  </span>
+                                  <code className="bg-white px-2 py-0.5 rounded text-[11px] text-neutral-900 font-mono border border-neutral-200 truncate">
+                                    {targetUrl || 'Nenhum link definido'}
+                                  </code>
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {targetUrl && (
+                                    <a
+                                      href={targetUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white px-3 py-1.5 rounded-sm transition-colors whitespace-nowrap shadow-xs ${
+                                        isWhatsApp 
+                                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                          : 'bg-[#1A1A1A] hover:bg-black'
+                                      }`}
+                                    >
+                                      <span>Testar Link</span>
+                                      <ExternalLink className="w-3 h-3 text-white" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 

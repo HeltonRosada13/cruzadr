@@ -11,7 +11,11 @@ import {
   Share2, 
   ExternalLink, 
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  Send,
+  Radio,
+  Headphones
 } from 'lucide-react';
 
 export function SocialMediaSection() {
@@ -32,8 +36,16 @@ export function SocialMediaSection() {
         return Youtube;
       case 'WhatsApp':
         return MessageCircle;
-      case 'Spotify':
+      case 'TikTok':
         return Music2;
+      case 'Spotify':
+        return Headphones;
+      case 'Telegram':
+        return Send;
+      case 'Website':
+        return Globe;
+      case 'Rádio':
+        return Radio;
       default:
         return Share2;
     }

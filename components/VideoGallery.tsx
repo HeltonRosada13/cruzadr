@@ -8,7 +8,8 @@ import { isYouTubeVideoUrl, formatYouTubeEmbedUrl } from '@/lib/utils';
 import { 
   Play, 
   Pause,
-  Video, 
+  Video,
+  Film,
   ChevronLeft, 
   ChevronRight, 
   X, 
@@ -37,6 +38,9 @@ export function VideoGallery() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlayingCarousel, setIsAutoPlayingCarousel] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [videoSearchTerm, setVideoSearchTerm] = useState('');
+  const [visibleLimit, setVisibleLimit] = useState(8);
   
   // Start muted to comply with iOS Safari and Android Chrome autoplay restrictions
   const [isInlineMuted, setIsInlineMuted] = useState(true);
@@ -45,6 +49,30 @@ export function VideoGallery() {
   
   // Persistent IndexedDB Blob URLs dictionary mapped by video ID
   const [persistentBlobMap, setPersistentBlobMap] = useState<Record<string, string>>({});
+
+  // Dynamic categories from all published videos
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    set.add('Todos');
+    videos.forEach((v) => {
+      if (v.category && v.category.trim()) {
+        set.add(v.category.trim());
+      }
+    });
+    return Array.from(set);
+  }, [videos]);
+
+  // Filtered video list matching category & search
+  const filteredVideos = useMemo(() => {
+    return videos.filter((v) => {
+      const matchesCategory = selectedCategory === 'Todos' || v.category === selectedCategory;
+      const term = videoSearchTerm.trim().toLowerCase();
+      const matchesSearch = !term || 
+        v.title.toLowerCase().includes(term) || 
+        (v.description && v.description.toLowerCase().includes(term));
+      return matchesCategory && matchesSearch;
+    });
+  }, [videos, selectedCategory, videoSearchTerm]);
   
   const sectionRef = useRef<HTMLElement>(null);
   const isSectionVisibleRef = useRef<boolean>(false);
@@ -568,75 +596,196 @@ export function VideoGallery() {
           </div>
         )}
 
-        {/* Carousel Pagination Dots */}
+        {/* Carousel Pagination Controls (Adaptive for >10, >20 videos) */}
         {videos.length > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            {videos.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setIsAutoPlayingCarousel(false);
-                  setCurrentIndex(idx);
-                }}
-                aria-label={`Ir para o vídeo ${idx + 1}`}
-                className={`h-1.5 transition-all cursor-pointer rounded-sm ${
-                  currentIndex === idx
-                    ? 'w-6 bg-[#C5A059]'
-                    : 'w-2 bg-neutral-300 hover:bg-neutral-400'
-                }`}
-              />
-            ))}
+          <div className="flex items-center justify-center gap-3 mt-6">
+            {videos.length <= 8 ? (
+              <div className="flex items-center justify-center gap-2">
+                {videos.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setIsAutoPlayingCarousel(false);
+                      setCurrentIndex(idx);
+                    }}
+                    aria-label={`Ir para o vídeo ${idx + 1}`}
+                    className={`h-1.5 transition-all cursor-pointer rounded-sm ${
+                      currentIndex === idx
+                        ? 'w-6 bg-[#C5A059]'
+                        : 'w-2 bg-neutral-300 hover:bg-neutral-400'
+                    }`}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-white px-4 py-1.5 rounded-full border border-neutral-200 shadow-sm text-xs text-neutral-700">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  className="p-1 hover:text-[#C5A059] transition-colors cursor-pointer"
+                  title="Vídeo Anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-mono text-neutral-900 font-semibold tracking-wider text-[11px]">
+                  {currentIndex + 1} <span className="text-neutral-400 font-normal">/</span> {videos.length} vídeos
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="p-1 hover:text-[#C5A059] transition-colors cursor-pointer"
+                  title="Próximo Vídeo"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Video Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {videos.map((video, idx) => (
-          <div
-            key={video.id}
-            id={`video-card-${video.id}`}
-            onClick={() => {
-              setCurrentIndex(idx);
-              handleOpenVideoModal(video);
-            }}
-            className={`group rounded-sm overflow-hidden border bg-white p-3 transition-all duration-300 cursor-pointer ${
-              currentIndex === idx
-                ? 'border-[#C5A059] shadow-sm'
-                : 'border-neutral-200/80 hover:border-neutral-900 shadow-sm'
-            }`}
-          >
-            <div className="relative h-40 rounded-sm overflow-hidden mb-3 bg-neutral-900">
-              <Image
-                src={video.thumbnailUrl || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=900&q=80'}
-                alt={video.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
-
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-9 h-9 rounded-full bg-white/95 text-neutral-900 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5 text-[#C5A059]" />
-                </div>
-              </div>
-
-              <span className="absolute bottom-2 right-2 px-2 py-0.5 text-[9px] font-bold bg-black/80 text-white rounded-sm">
-                {video.duration}
-              </span>
-            </div>
-
-            <h4 className="text-xs sm:text-sm font-editorial italic text-neutral-900 line-clamp-1 group-hover:text-[#C5A059] transition-colors mb-1">
-              {video.title}
-            </h4>
-            <p className="text-[11px] text-neutral-500 font-light line-clamp-2 leading-relaxed">
-              {video.description}
-            </p>
+      {/* Categories & Search Filter Bar (Active when multiple videos exist) */}
+      {videos.length > 4 && (
+        <div className="mb-8 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-neutral-200 pb-5">
+          {/* Category Chips */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setVisibleLimit(8);
+                }}
+                className={`px-3 py-1.5 rounded-sm text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-[#1A1A1A] text-white shadow-xs'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* Quick Search */}
+          <div className="w-full md:w-64 relative">
+            <input
+              type="text"
+              placeholder="Pesquisar vídeos..."
+              value={videoSearchTerm}
+              onChange={(e) => {
+                setVideoSearchTerm(e.target.value);
+                setVisibleLimit(8);
+              }}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-neutral-300 rounded-sm focus:outline-none focus:border-black"
+            />
+            {videoSearchTerm && (
+              <button
+                type="button"
+                onClick={() => setVideoSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs font-bold"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Cards Grid */}
+      {filteredVideos.length === 0 ? (
+        <div className="p-8 text-center bg-neutral-50 rounded-sm border border-neutral-200 mb-6">
+          <p className="text-xs text-neutral-500">Nenhum vídeo encontrado para esta categoria ou pesquisa.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory('Todos');
+              setVideoSearchTerm('');
+            }}
+            className="mt-2 text-xs text-[#C5A059] font-bold uppercase tracking-wider hover:underline"
+          >
+            Limpar Filtros
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {filteredVideos.slice(0, visibleLimit).map((video) => {
+              const actualIndex = videos.findIndex((v) => v.id === video.id);
+              return (
+                <div
+                  key={video.id}
+                  id={`video-card-${video.id}`}
+                  onClick={() => {
+                    if (actualIndex >= 0) setCurrentIndex(actualIndex);
+                    handleOpenVideoModal(video);
+                  }}
+                  className={`group rounded-sm overflow-hidden border bg-white p-3 transition-all duration-300 cursor-pointer ${
+                    currentIndex === actualIndex
+                      ? 'border-[#C5A059] shadow-sm ring-1 ring-[#C5A059]/30'
+                      : 'border-neutral-200/80 hover:border-neutral-900 shadow-sm'
+                  }`}
+                >
+                  <div className="relative h-40 rounded-sm overflow-hidden mb-3 bg-neutral-900">
+                    <Image
+                      src={video.thumbnailUrl || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=900&q=80'}
+                      alt={video.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
+
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full bg-white/95 text-neutral-900 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5 text-[#C5A059]" />
+                      </div>
+                    </div>
+
+                    <span className="absolute bottom-2 right-2 px-2 py-0.5 text-[9px] font-bold bg-black/80 text-white rounded-sm">
+                      {video.duration}
+                    </span>
+                  </div>
+
+                  <h4 className="text-xs sm:text-sm font-editorial italic text-neutral-900 line-clamp-1 group-hover:text-[#C5A059] transition-colors mb-1">
+                    {video.title}
+                  </h4>
+                  <p className="text-[11px] text-neutral-500 font-light line-clamp-2 leading-relaxed">
+                    {video.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Show More / Expand Button for large galleries (10, 20, 50 videos) */}
+          {filteredVideos.length > 8 && (
+            <div className="mt-8 flex items-center justify-center gap-3">
+              {visibleLimit < filteredVideos.length ? (
+                <button
+                  type="button"
+                  id="btn-ver-mais-videos"
+                  onClick={() => setVisibleLimit((prev) => prev + 12)}
+                  className="px-6 py-2.5 bg-neutral-900 hover:bg-[#C5A059] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-all shadow-sm cursor-pointer flex items-center gap-2"
+                >
+                  <Film className="w-4 h-4" />
+                  <span>Ver Mais Vídeos ({filteredVideos.length - visibleLimit} restantes)</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setVisibleLimit(8)}
+                  className="px-6 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold uppercase tracking-widest rounded-sm transition-all cursor-pointer"
+                >
+                  Mostrar Menos
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Video Player Modal */}
       {selectedVideo && (

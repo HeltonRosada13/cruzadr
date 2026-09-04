@@ -17,7 +17,13 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
-  Shield
+  Shield,
+  Globe,
+  Send,
+  Radio,
+  Music2,
+  Headphones,
+  Share2
 } from 'lucide-react';
 
 export function Footer() {
@@ -33,8 +39,18 @@ export function Footer() {
         return Youtube;
       case 'WhatsApp':
         return MessageCircle;
+      case 'TikTok':
+        return Music2;
+      case 'Spotify':
+        return Headphones;
+      case 'Telegram':
+        return Send;
+      case 'Website':
+        return Globe;
+      case 'Rádio':
+        return Radio;
       default:
-        return Church;
+        return Share2;
     }
   };
 

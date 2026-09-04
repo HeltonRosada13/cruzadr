@@ -71,9 +71,22 @@ export interface ChurchEvent {
   featured?: boolean;
 }
 
+export type SocialPlatform = 
+  | 'Instagram' 
+  | 'Facebook' 
+  | 'WhatsApp' 
+  | 'YouTube' 
+  | 'TikTok' 
+  | 'Spotify' 
+  | 'Telegram' 
+  | 'X' 
+  | 'Website' 
+  | 'Rádio' 
+  | 'Outro';
+
 export interface SocialLink {
   id: string;
-  platform: 'Instagram' | 'Facebook' | 'WhatsApp' | 'YouTube' | 'TikTok' | 'Spotify';
+  platform: SocialPlatform | string;
   name: string;
   description: string;
   handle: string;
