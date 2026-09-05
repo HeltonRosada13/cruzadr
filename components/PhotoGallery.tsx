@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
 import { PhotoItem } from '@/lib/types';
 import { 
-  Sparkles, 
   ChevronLeft, 
   ChevronRight, 
   Maximize2, 

@@ -5,7 +5,7 @@ import { HighlightMoment } from '@/lib/types';
 import { processAndOptimizeImage } from '@/lib/imageUtils';
 import Image from 'next/image';
 import { 
-  Sparkles, 
+  Church, 
   Music, 
   BookOpen, 
   HeartHandshake, 
@@ -54,7 +54,7 @@ const AVAILABLE_ICONS = [
   { name: 'HeartHandshake', label: 'Comunhão & Amor', icon: HeartHandshake },
   { name: 'Gift', label: 'Ação Social & Donativos', icon: Gift },
   { name: 'Star', label: 'Destaque Geral', icon: Star },
-  { name: 'Sparkles', label: 'Impacto & Milagres', icon: Sparkles },
+  { name: 'Church', label: 'Igreja & Templo', icon: Church },
   { name: 'Users', label: 'Famílias & Juventude', icon: Users },
   { name: 'Sun', label: 'Avivamento & Luz', icon: Sun },
   { name: 'Heart', label: 'Amor Fraternal', icon: Heart },

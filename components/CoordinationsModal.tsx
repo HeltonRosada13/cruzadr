@@ -10,7 +10,6 @@ import {
   Copy, 
   Check, 
   X, 
-  Sparkles, 
   Search, 
   Music, 
   ShieldCheck, 
@@ -93,7 +92,7 @@ export default function CoordinationsModal({ isOpen, onClose }: CoordinationsMod
 
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/40">
-              <Sparkles className="w-3 h-3" />
+              <Users className="w-3 h-3" />
               Grupos Oficiais no WhatsApp
             </span>
           </div>

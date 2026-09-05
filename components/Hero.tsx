@@ -17,7 +17,6 @@ import {
   VolumeX,
   Play,
   Pause,
-  Sparkles,
   ExternalLink,
   X,
   Film,
@@ -439,8 +438,7 @@ export function Hero() {
         )}
 
         {/* Eyebrow in Editorial Typography */}
-        <span suppressHydrationWarning className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+        <span suppressHydrationWarning className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center">
           <span suppressHydrationWarning>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : (data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase())}</span>
         </span>
 

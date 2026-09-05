@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useChurch } from '@/lib/ChurchContext';
-import { MessageCircle, X, Send, Sparkles, CheckCheck } from 'lucide-react';
+import { MessageCircle, X, Send, CheckCheck } from 'lucide-react';
 
 export function WhatsAppFloating() {
   const { data } = useChurch();
@@ -102,7 +102,7 @@ export function WhatsAppFloating() {
           }}
           className="hidden sm:flex items-center gap-2 mb-3 px-3.5 py-2 rounded-sm bg-white border border-neutral-200 text-xs text-neutral-800 shadow-lg cursor-pointer hover:border-[#C5A059] transition-all"
         >
-          <Sparkles className="w-3 h-3 text-[#C5A059]" />
+          <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <span className="text-[11px] font-light">Fale com a nossa equipe no WhatsApp</span>
           <X
             className="w-3 h-3 text-neutral-400 hover:text-neutral-800 ml-1"

@@ -15,7 +15,6 @@ import {
   X, 
   Clock, 
   Calendar, 
-  Sparkles, 
   ExternalLink, 
   Share2, 
   Check, 

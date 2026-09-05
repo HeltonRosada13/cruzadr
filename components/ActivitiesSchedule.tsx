@@ -9,7 +9,6 @@ import {
   MapPin, 
   ArrowRight, 
   X, 
-  Sparkles, 
   User, 
   CheckCircle2, 
   Share2,

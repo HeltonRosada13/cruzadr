@@ -14,7 +14,6 @@ import {
   Youtube, 
   MessageCircle, 
   Heart, 
-  Sparkles,
   ExternalLink,
   ChevronRight,
   Shield,

@@ -10,7 +10,6 @@ import {
   Music2, 
   Share2, 
   ExternalLink, 
-  Sparkles,
   ShieldCheck,
   Globe,
   Send,

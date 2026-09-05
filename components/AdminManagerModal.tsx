@@ -23,7 +23,6 @@ import {
   Info,
   Church,
   CheckCircle2,
-  Sparkles,
   Star,
   Link2,
   FileText,
@@ -1240,7 +1239,7 @@ function AdminManagerModalInner() {
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 p-3 bg-neutral-50 border-b border-neutral-200 overflow-x-auto">
           {[
-            { id: 'activity', label: 'Atividade Principal', icon: Sparkles },
+            { id: 'activity', label: 'Atividade Principal', icon: Calendar },
             { id: 'church', label: 'Logotipo & Identidade', icon: Church },
             { id: 'highlights', label: `Destaques (${data.highlights.length})`, icon: Star },
             { id: 'photos', label: `Fotos (${data.photos.length})`, icon: ImageIcon },
@@ -1283,7 +1282,7 @@ function AdminManagerModalInner() {
               <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                    <Calendar className="w-4 h-4 text-[#C5A059]" />
                     <label className="text-xs font-bold uppercase tracking-widest text-white">
                       Texto em Destaque no Topo do Hero (Faixa Dourada / Eyebrow)
                     </label>
@@ -1300,7 +1299,6 @@ function AdminManagerModalInner() {
                 {/* Live Preview of the Golden Eyebrow Badge */}
                 <div className="p-3 bg-black/60 rounded-sm border border-neutral-800 flex items-center justify-center text-center">
                   <span className="text-[#C5A059] text-[11px] sm:text-xs font-bold tracking-[0.3em] uppercase flex items-center gap-2 drop-shadow-xs">
-                    <Sparkles className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
                     <span className="truncate">
                       {activityForm.heroEyebrow || 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ'}
                     </span>
@@ -1340,7 +1338,7 @@ function AdminManagerModalInner() {
               <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                    <FileText className="w-4 h-4 text-[#C5A059]" />
                     <label className="text-xs font-bold uppercase tracking-widest text-white">
                       Título Principal & Subtítulo do Hero (Destaque Central)
                     </label>
@@ -1616,7 +1614,7 @@ function AdminManagerModalInner() {
                   <div className="pt-3 border-t border-neutral-200 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-800 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                        <Video className="w-3.5 h-3.5 text-[#C5A059]" />
                         Vídeos Oficiais em Nuvem (Sincronização Instantânea em Todos os Telemóveis):
                       </span>
                     </div>
@@ -3501,7 +3499,7 @@ function AdminManagerModalInner() {
 
                             {testimony.activityName && (
                               <div className="text-[10px] text-[#C5A059] font-medium flex items-center gap-1">
-                                <Sparkles className="w-3 h-3 shrink-0" />
+                                <Calendar className="w-3 h-3 shrink-0" />
                                 <span>{testimony.activityName}</span>
                               </div>
                             )}

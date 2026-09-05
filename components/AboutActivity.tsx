@@ -7,7 +7,7 @@ import {
   Clock, 
   MapPin, 
   Church, 
-  Sparkles, 
+  Heart, 
   Users, 
   Target, 
   Info, 
@@ -171,7 +171,7 @@ export function AboutActivity() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-white border border-neutral-200/80 rounded-sm shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#C5A059]/10 flex items-center justify-center text-[#C5A059]">
-            <Sparkles className="w-4 h-4" />
+            <Heart className="w-4 h-4" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-neutral-900">Participe e Convide a sua Família</h4>

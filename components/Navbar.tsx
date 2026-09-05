@@ -14,7 +14,6 @@ import {
   Video, 
   Share2, 
   PhoneCall, 
-  Sparkles,
   ChevronRight,
   Users,
   Edit3

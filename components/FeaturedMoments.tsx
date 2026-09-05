@@ -3,7 +3,7 @@
 import React from 'react';
 import { useChurch } from '@/lib/ChurchContext';
 import { 
-  Sparkles, 
+  Church, 
   Music, 
   BookOpen, 
   HeartHandshake, 
@@ -50,8 +50,9 @@ export function FeaturedMoments() {
         return Heart;
       case 'Crown':
         return Crown;
+      case 'Church':
       case 'Sparkles':
-        return Sparkles;
+        return Church;
       case 'MessageSquare':
         return MessageSquare;
       case 'Calendar':
