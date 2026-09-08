@@ -46,11 +46,9 @@ export function Hero() {
   // Single main information title (avoids duplicate titles/eyebrows)
   const singleTitle = (activity.name && activity.name.trim() !== '')
     ? activity.name.trim()
-    : (activity.heroEyebrow && activity.heroEyebrow.trim() !== '')
-      ? activity.heroEyebrow.trim()
-      : (data.churchName && data.churchName.trim() !== '')
-        ? data.churchName.trim()
-        : 'Igreja Catedral de Amor e Fé';
+    : (data.churchName && data.churchName.trim() !== '')
+      ? data.churchName.trim()
+      : 'Igreja Catedral de Amor e Fé';
   const currentHeroVideoUrl = activity.heroVideo || '';
   const isYouTube = isYouTubeVideoUrl(currentHeroVideoUrl) || isYouTubeVideoUrl(customBlobUrl);
   const rawVideo = isYouTube
@@ -444,25 +442,14 @@ export function Hero() {
           </button>
         )}
 
-        {/* Single Main Information Title (Eliminates redundant eyebrow/duplicate info) */}
+        {/* Single Main Information Title (Exact single piece of information, no duplicates) */}
         <h1
           id="hero-activity-title"
           suppressHydrationWarning
-          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.95] mb-6 max-w-4xl drop-shadow-md"
+          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.95] mb-8 max-w-4xl drop-shadow-md"
         >
           {singleTitle}
         </h1>
-
-        {/* Subtitle / Frase Descritiva */}
-        {activity.subtitle && activity.subtitle.trim() !== '' && activity.subtitle.trim().toLowerCase() !== singleTitle.toLowerCase() && (
-          <p
-            id="hero-activity-subtitle"
-            suppressHydrationWarning
-            className="text-neutral-200 max-w-2xl text-sm sm:text-base md:text-lg font-light leading-relaxed mb-8 drop-shadow"
-          >
-            {activity.subtitle}
-          </p>
-        )}
 
         {/* Quick event meta badges */}
         {(activity.formattedDate || activity.location) && (

@@ -607,13 +607,19 @@ export function ChurchProvider({
   }, []);
 
   const updateCurrentActivity = useCallback((activityUpdate: Partial<ChurchActivity>) => {
-    updateStore((prev) => ({
-      ...prev,
-      currentActivity: {
+    updateStore((prev) => {
+      const updatedActivity = {
         ...prev.currentActivity,
         ...activityUpdate,
-      },
-    }), true);
+      };
+      if (activityUpdate.name !== undefined) {
+        updatedActivity.heroEyebrow = '';
+      }
+      return {
+        ...prev,
+        currentActivity: updatedActivity,
+      };
+    }, true);
   }, [updateStore]);
 
   const updateChurchInfo = useCallback((infoUpdate: Partial<ChurchSettings>) => {

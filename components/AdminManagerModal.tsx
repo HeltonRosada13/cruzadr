@@ -1296,51 +1296,36 @@ function AdminManagerModalInner() {
                   Defina o título principal exibido no centro do Hero. Aparece exatamente uma informação clara em destaque editorial.
                 </p>
 
-                {/* Live Preview of Single Title and Subtitle */}
+                {/* Live Preview of Single Title (Only One Information) */}
                 <div className="p-4 bg-black/80 rounded-sm border border-neutral-800 text-center space-y-2">
+                  <span className="text-[9px] uppercase tracking-widest text-[#C5A059] block font-bold">
+                    Informação Única em Exibição no Hero
+                  </span>
                   <h2 className="text-white text-xl sm:text-2xl font-editorial italic font-normal tracking-tight leading-tight max-w-xl mx-auto drop-shadow-md">
-                    {activityForm.name || activityForm.heroEyebrow || 'IGREJA CATEDRAL DE AMOR E FÉ'}
+                    {activityForm.name || 'IGREJA CATEDRAL DE AMOR E FÉ'}
                   </h2>
-                  {activityForm.subtitle && (
-                    <p className="text-neutral-300 text-xs font-light max-w-md mx-auto leading-relaxed truncate">
-                      {activityForm.subtitle}
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-3 pt-1">
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Título Principal da Atividade / Igreja *
+                      Título Principal da Atividade / Igreja (Informação Única) *
                     </label>
                     <input
                       type="text"
-                      value={activityForm.name || activityForm.heroEyebrow || ''}
+                      value={activityForm.name || ''}
                       onChange={(e) => setActivityForm({
                         ...activityForm,
                         name: e.target.value,
-                        heroEyebrow: e.target.value,
+                        heroEyebrow: '',
                       })}
                       placeholder="Ex: GRANDE CONFERÊNCIA RENOVO ou IGREJA CATEDRAL DE AMOR E FÉ"
                       className="w-full px-3 py-2.5 rounded-sm bg-neutral-800 border border-neutral-600 text-sm text-white focus:outline-none focus:border-[#C5A059] font-serif"
                       required
                     />
                     <span className="text-[10px] text-neutral-400 mt-0.5 block">
-                      Exibido como o único título de grande formato no Hero da página inicial.
+                      Exibido como a única informação em grande formato no Hero da página inicial em todos os dispositivos e navegadores.
                     </span>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Subtítulo / Frase de Impacto (Opcional)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={activityForm.subtitle || ''}
-                      onChange={(e) => setActivityForm({ ...activityForm, subtitle: e.target.value })}
-                      placeholder="Ex: Um momento de fé, comunhão, transformação e celebração."
-                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
-                    />
                   </div>
                 </div>
               </div>
