@@ -320,6 +320,7 @@ async function persistToFirestore(state: ChurchSettings, force = false): Promise
       lastPersistedPayloadJson = currentPayloadJson;
       isFirestoreQuotaExceeded = false;
       setQuotaExceededStored(false);
+      return true;
     }
   } catch (err) {
     console.warn('API POST notice:', err);
@@ -410,7 +411,7 @@ export function ChurchProvider({
     churchDataFetcher,
     {
       fallbackData: initialData || memoryState || initialChurchData,
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       revalidateOnMount: false,
       dedupingInterval: 4000,
@@ -461,8 +462,8 @@ export function ChurchProvider({
                 : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
               const currentLocalTs = getStoredLocalEditTimestamp() || 0;
 
-              // If remote is strictly newer or local has no timestamp yet
-              if ((!currentLocalTs && remoteTs > 0) || (remoteTs >= currentLocalTs)) {
+              // Only adopt remote data if it is strictly newer than current local state
+              if ((!currentLocalTs && remoteTs > 0) || (remoteTs > currentLocalTs)) {
                 const sanitized = sanitizeSavedData(remoteData);
                 memoryState = sanitized;
                 mutate(sanitized, false);
@@ -496,21 +497,6 @@ export function ChurchProvider({
           unsubscribe();
         } catch {}
       }
-    };
-  }, [mutate]);
-
-  // Visibility and tab focus listeners for instantaneous updates when waking device / switching apps
-  useEffect(() => {
-    const handleFocusOrVisible = () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        mutate();
-      }
-    };
-    window.addEventListener('visibilitychange', handleFocusOrVisible);
-    window.addEventListener('focus', handleFocusOrVisible);
-    return () => {
-      window.removeEventListener('visibilitychange', handleFocusOrVisible);
-      window.removeEventListener('focus', handleFocusOrVisible);
     };
   }, [mutate]);
 
@@ -594,7 +580,6 @@ export function ChurchProvider({
         setLastSyncedAt(new Date());
         setSyncState('synced');
         setIsQuotaExceeded(false);
-        globalMutate(SWR_KEY);
         return true;
       } else {
         setSyncState(isFirestoreQuotaExceeded ? 'quota_exceeded' : 'offline');

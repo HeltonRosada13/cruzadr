@@ -36,10 +36,16 @@ export async function POST(req: Request) {
     }
 
     const editTimestamp = body.editTimestamp || Date.now();
+    const currentState = loadServerStateFromFile();
     const merged = {
       ...initialChurchData,
-      ...loadServerStateFromFile(),
+      ...currentState,
       ...body,
+      currentActivity: {
+        ...initialChurchData.currentActivity,
+        ...(currentState?.currentActivity || {}),
+        ...(body?.currentActivity || {}),
+      },
       editTimestamp,
       lastUpdatedAt: new Date().toISOString(),
     };

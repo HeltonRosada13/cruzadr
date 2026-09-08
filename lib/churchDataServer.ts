@@ -9,11 +9,20 @@ const FIRESTORE_DOC_PATH = 'church_data';
 const FIRESTORE_DOC_ID = 'main';
 
 const SERVER_DATA_FILE = path.join('/tmp', 'church_data_persisted.json');
+const LOCAL_PERSISTED_FILE = path.join(process.cwd(), 'data', 'church_data_persisted.json');
 
 let inMemoryServerState: ChurchSettings = initialChurchData;
 
 export function loadServerStateFromFile(): ChurchSettings {
   try {
+    if (fs.existsSync(LOCAL_PERSISTED_FILE)) {
+      const raw = fs.readFileSync(LOCAL_PERSISTED_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        inMemoryServerState = { ...initialChurchData, ...parsed };
+        return inMemoryServerState;
+      }
+    }
     if (fs.existsSync(SERVER_DATA_FILE)) {
       const raw = fs.readFileSync(SERVER_DATA_FILE, 'utf8');
       const parsed = JSON.parse(raw);
@@ -31,7 +40,17 @@ export function loadServerStateFromFile(): ChurchSettings {
 export function saveServerStateToFile(data: Partial<ChurchSettings>): ChurchSettings {
   try {
     inMemoryServerState = { ...initialChurchData, ...inMemoryServerState, ...data };
-    fs.writeFileSync(SERVER_DATA_FILE, JSON.stringify(inMemoryServerState, null, 2), 'utf8');
+    const serialized = JSON.stringify(inMemoryServerState, null, 2);
+    try {
+      const dir = path.dirname(LOCAL_PERSISTED_FILE);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(LOCAL_PERSISTED_FILE, serialized, 'utf8');
+    } catch {}
+    try {
+      fs.writeFileSync(SERVER_DATA_FILE, serialized, 'utf8');
+    } catch {}
     return inMemoryServerState;
   } catch (err) {
     console.warn('Server file write notice:', err);
@@ -110,52 +129,5 @@ export function toFirestoreRestDoc(obj: Record<string, any>): { fields: Record<s
 
 export async function getChurchDataServer(): Promise<ChurchSettings> {
   const currentState = loadServerStateFromFile();
-
-  const urls = getFirestoreRestUrls();
-  for (const url of urls) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = parseFirestoreRestDoc(data);
-        if (parsed) {
-          const remoteTs = typeof parsed.editTimestamp === 'number'
-            ? parsed.editTimestamp
-            : (parsed.lastUpdatedAt ? new Date(parsed.lastUpdatedAt).getTime() : 0);
-          const serverTs = typeof currentState?.editTimestamp === 'number'
-            ? currentState.editTimestamp
-            : 0;
-
-          if (remoteTs >= serverTs) {
-            const merged: ChurchSettings = {
-              ...initialChurchData,
-              ...currentState,
-              ...parsed,
-              currentActivity: {
-                ...initialChurchData.currentActivity,
-                ...(currentState?.currentActivity || {}),
-                ...(parsed?.currentActivity || {}),
-              },
-            };
-            saveServerStateToFile(merged);
-            return merged;
-          }
-        }
-      }
-    } catch (error) {
-      // Non-blocking fallback to cached server state
-    }
-  }
-
   return currentState || initialChurchData;
 }

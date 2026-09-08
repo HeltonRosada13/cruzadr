@@ -1,3 +1,4 @@
 {
-  "/api/church-data/route": "app/api/church-data/route.js"
+  "/api/church-data/route": "app/api/church-data/route.js",
+  "/page": "app/page.js"
 }

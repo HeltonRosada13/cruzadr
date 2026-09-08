@@ -67,7 +67,7 @@ import {
 export function AdminManagerModal() {
   const { isAdminOpen, data } = useChurch();
   if (!isAdminOpen) return null;
-  return <AdminManagerModalInner key={data.currentActivity?.id || 'admin-modal'} />;
+  return <AdminManagerModalInner key={`${data.currentActivity?.id || 'admin-modal'}-${data.editTimestamp || 0}`} />;
 }
 
 function AdminManagerModalInner() {
