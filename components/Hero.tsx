@@ -43,7 +43,14 @@ export function Hero() {
   const [isCoordinationsOpen, setIsCoordinationsOpen] = useState(false);
   const youtubeIframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Identify YouTube link from activity, custom URL or fallback videos
+  // Single main information title (avoids duplicate titles/eyebrows)
+  const singleTitle = (activity.name && activity.name.trim() !== '')
+    ? activity.name.trim()
+    : (activity.heroEyebrow && activity.heroEyebrow.trim() !== '')
+      ? activity.heroEyebrow.trim()
+      : (data.churchName && data.churchName.trim() !== '')
+        ? data.churchName.trim()
+        : 'Igreja Catedral de Amor e Fé';
   const currentHeroVideoUrl = activity.heroVideo || '';
   const isYouTube = isYouTubeVideoUrl(currentHeroVideoUrl) || isYouTubeVideoUrl(customBlobUrl);
   const rawVideo = isYouTube
@@ -437,22 +444,17 @@ export function Hero() {
           </button>
         )}
 
-        {/* Eyebrow in Editorial Typography */}
-        <span suppressHydrationWarning className="text-[#C5A059] text-xs sm:text-sm font-bold tracking-[0.4em] uppercase mb-4 drop-shadow-sm flex items-center">
-          <span suppressHydrationWarning>{activity.heroEyebrow || (activity.badge ? `${activity.badge.toUpperCase()} — ${(data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase()}` : (data.churchName || 'IGREJA CATEDRAL DE AMOR E FÉ').toUpperCase())}</span>
-        </span>
-
-        {/* Activity Main Title in Editorial Serif */}
+        {/* Single Main Information Title (Eliminates redundant eyebrow/duplicate info) */}
         <h1
           id="hero-activity-title"
           suppressHydrationWarning
-          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.92] mb-6 max-w-4xl drop-shadow-md"
+          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.95] mb-6 max-w-4xl drop-shadow-md"
         >
-          {activity.name || data.churchName || 'Igreja Catedral de Amor e Fé'}
+          {singleTitle}
         </h1>
 
-        {/* Subtitle */}
-        {activity.subtitle && activity.subtitle.trim() !== '' && (
+        {/* Subtitle / Frase Descritiva */}
+        {activity.subtitle && activity.subtitle.trim() !== '' && activity.subtitle.trim().toLowerCase() !== singleTitle.toLowerCase() && (
           <p
             id="hero-activity-subtitle"
             suppressHydrationWarning

@@ -385,7 +385,13 @@ const emptySubscribe = () => () => {};
 
 const ChurchContext = createContext<ChurchContextType | undefined>(undefined);
 
-export function ChurchProvider({ children }: { children: React.ReactNode }) {
+export function ChurchProvider({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  initialData?: ChurchSettings;
+}) {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isTimedOut, setIsTimedOut] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>('ready');
@@ -398,30 +404,39 @@ export function ChurchProvider({ children }: { children: React.ReactNode }) {
     () => false
   );
 
-  // SWR: Cache-first data management with real-time background revalidation and fast deduplication
+  // SWR: Initialized with SSR server data, zero-flash, onSnapshot handles live updates
   const { data: swrData, mutate } = useSWR<ChurchSettings>(
     SWR_KEY,
     churchDataFetcher,
     {
-      fallbackData: memoryState,
+      fallbackData: initialData || memoryState || initialChurchData,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      revalidateOnMount: true,
-      dedupingInterval: 500,
-      refreshInterval: 4000,
+      revalidateOnMount: false,
+      dedupingInterval: 4000,
+      refreshInterval: 0,
     }
   );
 
-  const activeData = swrData || memoryState || initialChurchData;
+  const activeData = swrData || initialData || memoryState || initialChurchData;
 
   useEffect(() => {
-    // On client mount, check if localStorage has unsynced/newer local state
+    if (initialData) {
+      memoryState = initialData;
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    // On client mount, only adopt localStorage if it is strictly newer than server state
     const local = getInitialLocalCachedState();
-    if (local && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
+    const localTs = typeof local.editTimestamp === 'number' ? local.editTimestamp : 0;
+    const currentTs = typeof activeData.editTimestamp === 'number' ? activeData.editTimestamp : 0;
+
+    if (local && localTs > currentTs && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
       memoryState = local;
       mutate(local, false);
     }
-  }, [mutate]);
+  }, [activeData.editTimestamp, mutate]);
 
   useEffect(() => {
     if (swrData) {

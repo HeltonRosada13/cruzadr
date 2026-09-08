@@ -100,12 +100,20 @@ export function Navbar() {
               )}
             </div>
             <div className="flex flex-col">
-              <span suppressHydrationWarning className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
-                {data.logoPrefix || 'Catedral de'}
-              </span>
-              <span suppressHydrationWarning className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
-                {data.logoSuffix || 'Amor e Fé'}
-              </span>
+              {data.logoPrefix && data.logoSuffix ? (
+                <>
+                  <span suppressHydrationWarning className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
+                    {data.logoPrefix}
+                  </span>
+                  <span suppressHydrationWarning className="text-base sm:text-lg font-bold tracking-tight leading-none text-neutral-900 group-hover:text-[#C5A059] transition-colors">
+                    {data.logoSuffix}
+                  </span>
+                </>
+              ) : (
+                <span suppressHydrationWarning className="text-base sm:text-lg font-bold tracking-tight leading-tight text-neutral-900 group-hover:text-[#C5A059] transition-colors">
+                  {data.churchName || `${data.logoPrefix || 'Catedral de'} ${data.logoSuffix || 'Amor e Fé'}`.trim()}
+                </span>
+              )}
             </div>
           </a>
 

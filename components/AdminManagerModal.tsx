@@ -1278,69 +1278,13 @@ function AdminManagerModalInner() {
                 Edite os dados que aparecem no Hero e na seção &quot;Sobre a Atividade&quot;. As alterações afetam imediatamente a contagem regressiva e os destaques.
               </div>
 
-              {/* SEÇÃO DEDICADA: FAIXA / TEXTO DE DESTAQUE SUPERIOR DO HERO */}
-              <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#C5A059]" />
-                    <label className="text-xs font-bold uppercase tracking-widest text-white">
-                      Texto em Destaque no Topo do Hero (Faixa Dourada / Eyebrow)
-                    </label>
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
-                    Cabeçalho Principal
-                  </span>
-                </div>
-
-                <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
-                  Este é o texto exibido em letras maiúsculas douradas logo acima do título principal no Hero do site.
-                </p>
-
-                {/* Live Preview of the Golden Eyebrow Badge */}
-                <div className="p-3 bg-black/60 rounded-sm border border-neutral-800 flex items-center justify-center text-center">
-                  <span className="text-[#C5A059] text-[11px] sm:text-xs font-bold tracking-[0.3em] uppercase flex items-center gap-2 drop-shadow-xs">
-                    <span className="truncate">
-                      {activityForm.heroEyebrow || 'EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ'}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                  <div className="md:col-span-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Texto Completo da Faixa do Hero *
-                    </label>
-                    <input
-                      type="text"
-                      value={activityForm.heroEyebrow || ''}
-                      onChange={(e) => setActivityForm({ ...activityForm, heroEyebrow: e.target.value })}
-                      placeholder="Ex: EVENTO ESPECIAL DO ANO — IGREJA CATEDRAL DE AMOR E FÉ"
-                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059] font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Etiqueta / Badge Curto
-                    </label>
-                    <input
-                      type="text"
-                      value={activityForm.badge || ''}
-                      onChange={(e) => setActivityForm({ ...activityForm, badge: e.target.value })}
-                      placeholder="Ex: Evento Especial do Ano"
-                      className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SEÇÃO DEDICADA: TÍTULO PRINCIPAL E SUBTÍTULO DO HERO */}
+              {/* SEÇÃO DEDICADA: TÍTULO PRINCIPAL DO HERO (INFORMAÇÃO ÚNICA) */}
               <div className="p-4 rounded-sm bg-neutral-900 text-white border border-neutral-700 space-y-3 mb-4 shadow-sm">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#C5A059]" />
                     <label className="text-xs font-bold uppercase tracking-widest text-white">
-                      Título Principal & Subtítulo do Hero (Destaque Central)
+                      Título Principal do Hero (Informação Principal)
                     </label>
                   </div>
                   <span className="text-[9px] uppercase tracking-wider bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded font-bold border border-[#C5A059]/40">
@@ -1349,48 +1293,53 @@ function AdminManagerModalInner() {
                 </div>
 
                 <p className="text-[11px] text-neutral-300 font-light leading-relaxed">
-                  Edite o título de grande impacto e o subtítulo descritivo exibidos no centro do Hero da página inicial.
+                  Defina o título principal exibido no centro do Hero. Aparece exatamente uma informação clara em destaque editorial.
                 </p>
 
-                {/* Live Preview of Title and Subtitle */}
+                {/* Live Preview of Single Title and Subtitle */}
                 <div className="p-4 bg-black/80 rounded-sm border border-neutral-800 text-center space-y-2">
                   <h2 className="text-white text-xl sm:text-2xl font-editorial italic font-normal tracking-tight leading-tight max-w-xl mx-auto drop-shadow-md">
-                    {activityForm.name || 'GRANDE CONFERÊNCIA RENOVO'}
+                    {activityForm.name || activityForm.heroEyebrow || 'IGREJA CATEDRAL DE AMOR E FÉ'}
                   </h2>
-                  <p className="text-neutral-300 text-xs font-light max-w-md mx-auto leading-relaxed truncate">
-                    {activityForm.subtitle || 'Um momento de fé, comunhão, transformação e celebração.'}
-                  </p>
+                  {activityForm.subtitle && (
+                    <p className="text-neutral-300 text-xs font-light max-w-md mx-auto leading-relaxed truncate">
+                      {activityForm.subtitle}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-1">
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Título Principal da Atividade / Conferência *
+                      Título Principal da Atividade / Igreja *
                     </label>
                     <input
                       type="text"
-                      value={activityForm.name}
-                      onChange={(e) => setActivityForm({ ...activityForm, name: e.target.value })}
-                      placeholder="Ex: GRANDE CONFERÊNCIA RENOVO ou CRUZADA DE CURAS E MILAGRES"
+                      value={activityForm.name || activityForm.heroEyebrow || ''}
+                      onChange={(e) => setActivityForm({
+                        ...activityForm,
+                        name: e.target.value,
+                        heroEyebrow: e.target.value,
+                      })}
+                      placeholder="Ex: GRANDE CONFERÊNCIA RENOVO ou IGREJA CATEDRAL DE AMOR E FÉ"
                       className="w-full px-3 py-2.5 rounded-sm bg-neutral-800 border border-neutral-600 text-sm text-white focus:outline-none focus:border-[#C5A059] font-serif"
                       required
                     />
                     <span className="text-[10px] text-neutral-400 mt-0.5 block">
-                      Exibido em fonte editorial itálica e grande formato no topo da página.
+                      Exibido como o único título de grande formato no Hero da página inicial.
                     </span>
                   </div>
 
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-300 block mb-1">
-                      Subtítulo / Frase de Impacto *
+                      Subtítulo / Frase de Impacto (Opcional)
                     </label>
                     <textarea
                       rows={2}
-                      value={activityForm.subtitle}
+                      value={activityForm.subtitle || ''}
                       onChange={(e) => setActivityForm({ ...activityForm, subtitle: e.target.value })}
                       placeholder="Ex: Um momento de fé, comunhão, transformação e celebração."
                       className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
-                      required
                     />
                   </div>
                 </div>
