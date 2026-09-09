@@ -21,7 +21,8 @@ import {
   X,
   Film,
   Users,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -66,9 +67,9 @@ export function Hero() {
     (activity.location && activity.location.trim() !== '') ||
     (activity.date && activity.date.trim() !== '')
   );
-  const hasAnyActivityInfo = hasActivityName || hasActivityDetails;
+  const hasAnyActivityInfo = hasActivityName || hasActivityDetails || hasChurchName;
 
-  const hasAbout = Boolean(activity.description || activity.name || activity.theme);
+  const hasAbout = Boolean(activity.description || activity.name || activity.theme || data.churchAbout);
   const hasHighlights = Boolean(data.highlights && data.highlights.length > 0);
   const hasPhotos = Boolean(data.photos && data.photos.length > 0);
   const hasVideos = Boolean(data.videos && data.videos.length > 0);
@@ -527,14 +528,30 @@ export function Hero() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-4 w-full max-w-lg mx-auto mb-10">
-            <p className="text-xs sm:text-sm text-neutral-300 font-light max-w-md mx-auto leading-relaxed">
-              {data.churchMotto || 'O conteúdo e as programações deste site serão exibidos assim que o administrador publicar as informações oficiais.'}
-            </p>
+          <div 
+            id="hero-loading-empty-state"
+            className="flex flex-col items-center justify-center gap-4 w-full max-w-lg mx-auto mb-10 text-center animate-fade-in"
+          >
+            {/* Círculo a Girar (Spinner Circular Animado) */}
+            <div className="relative flex items-center justify-center w-14 h-14 my-1" aria-label="A Carregar">
+              <div className="w-14 h-14 rounded-full border-2 border-[#C5A059]/25" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#C5A059] border-r-[#C5A059] animate-spin" />
+              <Loader2 className="w-7 h-7 text-[#C5A059] animate-spin" />
+            </div>
+
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="text-base sm:text-lg font-bold tracking-widest text-white uppercase">
+                A Carregar
+              </span>
+              <p className="text-xs sm:text-sm text-neutral-400 font-light max-w-sm leading-relaxed">
+                Aguardando a publicação das informações oficiais...
+              </p>
+            </div>
+
             <button
               id="hero-btn-admin-config"
               onClick={() => setIsAdminOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-neutral-950 bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-lg"
+              className="mt-1 inline-flex items-center gap-2 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-neutral-950 bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-lg"
             >
               <Shield className="w-3.5 h-3.5" />
               <span>Acessar Painel de Gestão</span>
