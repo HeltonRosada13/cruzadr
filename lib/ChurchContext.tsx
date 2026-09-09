@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { ChurchSettings, ChurchActivity, PhotoItem, VideoItem, ChurchEvent, SocialLink, HighlightMoment, Testimony, CoordinationGroup } from './types';
-import { initialChurchData } from './churchData';
+import { initialChurchData, hasUserContent } from './churchData';
 import { db, doc, setDoc, onSnapshot, handleFirestoreError, OperationType } from './firebase';
 import { deleteVideoFileBlob, clearAllStoredVideoBlobs, clearHeroVideoBlob } from './videoStorage';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -61,6 +61,7 @@ interface ChurchContextType {
 }
 
 const LOCAL_STORAGE_KEY = 'catedral_universal_data_v4';
+const BACKUP_LOCAL_STORAGE_KEY = 'catedral_immutable_admin_backup_v1';
 const LAST_EDIT_TS_KEY = 'catedral_last_edit_timestamp_v4';
 const QUOTA_STORAGE_KEY = 'catedral_firestore_quota_exceeded_timestamp_v4';
 const SWR_KEY = '/api/church-data';
@@ -69,16 +70,6 @@ const FIRESTORE_DOC_ID = 'main';
 const FIREBASE_PROJECT_ID = firebaseConfig.projectId || 'cruzadr-c0235';
 const FIRESTORE_DB_ID = firebaseConfig.firestoreDatabaseId || '(default)';
 const FIREBASE_CONSOLE_URL = `https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/firestore/databases/${FIRESTORE_DB_ID}/data?openUpgradeDialog=true`;
-
-// Clean up any stale legacy cache keys from earlier versions
-if (typeof window !== 'undefined') {
-  try {
-    localStorage.removeItem('catedral_amor_e_fe_data_v1');
-    localStorage.removeItem('catedral_amor_e_fe_data_v2');
-    localStorage.removeItem('catedral_amor_e_fe_data_v3');
-    localStorage.removeItem('catedral_last_edit_timestamp_v3');
-  } catch {}
-}
 
 const API_KEY = firebaseConfig.apiKey || '';
 const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DB_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${API_KEY ? `?key=${API_KEY}` : ''}`;
@@ -194,10 +185,55 @@ function sanitizeSavedData(savedRaw: string | Record<string, any>): ChurchSettin
 function getInitialLocalCachedState(): ChurchSettings {
   if (typeof window === 'undefined') return initialChurchData;
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
-      const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
-      if (parsed && typeof parsed === 'object' && (parsed.churchName || parsed.currentActivity)) {
+    // 1. Try primary storage key
+    const primary = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (primary) {
+      const parsed = JSON.parse(primary);
+      if (hasUserContent(parsed)) {
+        return sanitizeSavedData(parsed);
+      }
+    }
+
+    // 2. Try backup storage key
+    const backup = localStorage.getItem(BACKUP_LOCAL_STORAGE_KEY);
+    if (backup) {
+      const parsed = JSON.parse(backup);
+      if (hasUserContent(parsed)) {
+        const sanitized = sanitizeSavedData(parsed);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+        } catch {}
+        return sanitized;
+      }
+    }
+
+    // 3. Inspect legacy keys to recover previously saved administrator data
+    const legacyKeys = [
+      'catedral_amor_e_fe_data_v3',
+      'catedral_amor_e_fe_data_v2',
+      'catedral_amor_e_fe_data_v1',
+      'catedral_church_data',
+    ];
+    for (const lk of legacyKeys) {
+      const legacyVal = localStorage.getItem(lk);
+      if (legacyVal) {
+        try {
+          const parsed = JSON.parse(legacyVal);
+          if (hasUserContent(parsed)) {
+            const sanitized = sanitizeSavedData(parsed);
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+              localStorage.setItem(BACKUP_LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+            } catch {}
+            return sanitized;
+          }
+        } catch {}
+      }
+    }
+
+    if (primary) {
+      const parsed = JSON.parse(primary);
+      if (parsed && typeof parsed === 'object') {
         return sanitizeSavedData(parsed);
       }
     }
@@ -214,6 +250,10 @@ const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in 
 
 // SWR fetcher: Server is the single source of truth for all browsers & incognito sessions
 const churchDataFetcher = async (): Promise<ChurchSettings> => {
+  const localCached = getInitialLocalCachedState();
+  const localHasContent = hasUserContent(localCached);
+  const localTs = localCached.editTimestamp || 0;
+
   try {
     const res = await fetch(SWR_KEY, {
       method: 'GET',
@@ -227,21 +267,57 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
     if (res.ok) {
       const json = await res.json();
       if (json.success && json.data) {
-        const sanitized = sanitizeSavedData(json.data);
-        memoryState = sanitized;
+        const serverData = sanitizeSavedData(json.data);
+        const serverHasContent = hasUserContent(serverData);
+        const serverTs = serverData.editTimestamp || 0;
+
+        // CRITICAL PROTECTION 1: Never overwrite populated local data with empty server data!
+        // Instead, automatically re-seed the server!
+        if (!serverHasContent && localHasContent && localTs > 0) {
+          fetch(SWR_KEY, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(localCached),
+          }).catch(() => {});
+          memoryState = localCached;
+          return localCached;
+        }
+
+        // CRITICAL PROTECTION 2: If local data has newer edits than server, retain and push to server
+        if (localHasContent && localTs > serverTs) {
+          fetch(SWR_KEY, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(localCached),
+          }).catch(() => {});
+          memoryState = localCached;
+          return localCached;
+        }
+
+        // Server has newest valid state
+        memoryState = serverData;
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData));
+            if (serverHasContent) {
+              localStorage.setItem(BACKUP_LOCAL_STORAGE_KEY, JSON.stringify(serverData));
+            }
           } catch {}
         }
-        return sanitized;
+        return serverData;
       }
     }
   } catch (err) {
     console.warn('SWR fetcher notice:', err);
   }
 
-  return memoryState || getInitialLocalCachedState();
+  return memoryState || localCached;
 };
 
 let memoryState: ChurchSettings = initialChurchData;
@@ -414,16 +490,32 @@ export function ChurchProvider({
   const activeData = swrData || initialData || memoryState || initialChurchData;
 
   useEffect(() => {
-    if (initialData) {
+    if (initialData && (hasUserContent(initialData) || (initialData.editTimestamp || 0) > 0)) {
       memoryState = initialData;
     }
   }, [initialData]);
 
   useEffect(() => {
-    if (swrData) {
+    if (swrData && (hasUserContent(swrData) || (swrData.editTimestamp || 0) > 0)) {
       memoryState = swrData;
     }
   }, [swrData]);
+
+  // Client-side self-healing on mount:
+  useEffect(() => {
+    const local = getInitialLocalCachedState();
+    if (hasUserContent(local)) {
+      const serverHasContent = hasUserContent(initialData);
+      const localTs = local.editTimestamp || 0;
+      const serverTs = initialData?.editTimestamp || 0;
+
+      if (!serverHasContent || localTs > serverTs) {
+        memoryState = local;
+        mutate(local, false);
+        persistToFirestore(local, true).catch(() => {});
+      }
+    }
+  }, [initialData, mutate]);
 
   // Real-time Firestore onSnapshot push listener for instant cross-device updates
   useEffect(() => {
@@ -524,6 +616,9 @@ export function ChurchProvider({
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        if (hasUserContent(updated)) {
+          localStorage.setItem(BACKUP_LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        }
         broadcastChannel?.postMessage({ type: 'SYNC_STATE_UPDATE', payload: updated });
       } catch (e) {
         console.warn('LocalStorage save error:', e);
@@ -897,15 +992,22 @@ export function ChurchProvider({
   const resetToDefaults = useCallback(() => {
     clearAllStoredVideoBlobs();
     clearHeroVideoBlob();
-    updateStore(() => initialChurchData, true);
+    const explicitEmpty: ChurchSettings & { isExplicitReset?: boolean } = {
+      ...initialChurchData,
+      editTimestamp: Date.now(),
+      lastUpdatedAt: new Date().toISOString(),
+      isExplicitReset: true,
+    };
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialChurchData));
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        localStorage.removeItem(BACKUP_LOCAL_STORAGE_KEY);
         window.dispatchEvent(new CustomEvent('hero-video-updated', { detail: { blobUrl: null } }));
       } catch (e) {
         console.error(e);
       }
     }
+    updateStore(() => explicitEmpty, true);
   }, [updateStore]);
 
   return (

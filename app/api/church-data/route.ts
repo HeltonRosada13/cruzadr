@@ -36,10 +36,11 @@ export async function POST(req: Request) {
     }
 
     const editTimestamp = body.editTimestamp || Date.now();
-    // Save to server filesystem and memory cache
+    // Save to server filesystem and memory cache with anti-blanking protection
     const saved = saveServerStateToFile({
       ...body,
       editTimestamp,
+      isExplicitReset: Boolean(body.isExplicitReset),
     });
 
     // 2. Sync to cloud Firestore in background

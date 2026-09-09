@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import firebaseConfig from '@/firebase-applet-config.json';
-import { initialChurchData } from '@/lib/churchData';
+import { initialChurchData, hasUserContent } from '@/lib/churchData';
 import { ChurchSettings } from '@/lib/types';
 
 const FIRESTORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId || '(default)';
@@ -10,50 +10,78 @@ const FIRESTORE_DOC_ID = 'main';
 
 const SERVER_DATA_FILE = path.join('/tmp', 'church_data_persisted.json');
 const LOCAL_PERSISTED_FILE = path.join(process.cwd(), 'data', 'church_data_persisted.json');
+const BACKUP_PERSISTED_FILE = path.join(process.cwd(), 'data', 'church_data_backup.json');
 
 let inMemoryServerState: ChurchSettings = initialChurchData;
 
-export function loadServerStateFromFile(): ChurchSettings {
+function safeParseJson(filePath: string): ChurchSettings | null {
   try {
-    let candidateFile: string | null = null;
-    let newestMtime = -1;
-
-    if (fs.existsSync(LOCAL_PERSISTED_FILE)) {
-      try {
-        const stats = fs.statSync(LOCAL_PERSISTED_FILE);
-        if (stats.mtimeMs > newestMtime) {
-          newestMtime = stats.mtimeMs;
-          candidateFile = LOCAL_PERSISTED_FILE;
-        }
-      } catch {}
-    }
-    if (fs.existsSync(SERVER_DATA_FILE)) {
-      try {
-        const stats = fs.statSync(SERVER_DATA_FILE);
-        if (stats.mtimeMs > newestMtime) {
-          newestMtime = stats.mtimeMs;
-          candidateFile = SERVER_DATA_FILE;
-        }
-      } catch {}
-    }
-
-    if (candidateFile) {
-      const raw = fs.readFileSync(candidateFile, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        inMemoryServerState = { ...initialChurchData, ...parsed };
-        return inMemoryServerState;
-      }
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, 'utf8');
+    if (!raw || raw.trim().length === 0) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return { ...initialChurchData, ...parsed };
     }
   } catch (err) {
-    console.warn('Server file read notice:', err);
+    console.warn(`Notice reading ${filePath}:`, err);
   }
-  return inMemoryServerState;
+  return null;
 }
 
-export function saveServerStateToFile(data: Partial<ChurchSettings>): ChurchSettings {
+export function loadServerStateFromFile(): ChurchSettings {
+  try {
+    const candidates: ChurchSettings[] = [];
+
+    // 1. Check in-memory state
+    if (inMemoryServerState && (hasUserContent(inMemoryServerState) || (inMemoryServerState.editTimestamp || 0) > 0)) {
+      candidates.push(inMemoryServerState);
+    }
+
+    // 2. Check local data file
+    const localData = safeParseJson(LOCAL_PERSISTED_FILE);
+    if (localData) candidates.push(localData);
+
+    // 3. Check backup file
+    const backupData = safeParseJson(BACKUP_PERSISTED_FILE);
+    if (backupData) candidates.push(backupData);
+
+    // 4. Check /tmp file
+    const tmpData = safeParseJson(SERVER_DATA_FILE);
+    if (tmpData) candidates.push(tmpData);
+
+    if (candidates.length === 0) {
+      return inMemoryServerState || initialChurchData;
+    }
+
+    // Filter candidates that have actual user content
+    const withContent = candidates.filter((c) => hasUserContent(c));
+    const pool = withContent.length > 0 ? withContent : candidates;
+
+    // Pick candidate with highest editTimestamp
+    pool.sort((a, b) => (b.editTimestamp || 0) - (a.editTimestamp || 0));
+    const best = pool[0];
+
+    inMemoryServerState = best;
+    return best;
+  } catch (err) {
+    console.warn('Server load notice:', err);
+    return inMemoryServerState || initialChurchData;
+  }
+}
+
+export function saveServerStateToFile(data: Partial<ChurchSettings> & { isExplicitReset?: boolean }): ChurchSettings {
   try {
     const current = loadServerStateFromFile();
+    const isExplicit = Boolean(data.isExplicitReset);
+
+    // If existing data has user content, but incoming data is empty and not explicit reset, preserve existing!
+    if (hasUserContent(current) && !hasUserContent(data) && !isExplicit) {
+      console.warn('[Server Guard] Prevented overwriting populated church data with empty payload.');
+      return current;
+    }
+
+    const editTimestamp = data.editTimestamp || Date.now();
     const updated: ChurchSettings = {
       ...initialChurchData,
       ...current,
@@ -63,28 +91,34 @@ export function saveServerStateToFile(data: Partial<ChurchSettings>): ChurchSett
         ...(current?.currentActivity || {}),
         ...(data?.currentActivity || {}),
       },
-      editTimestamp: data.editTimestamp || Date.now(),
+      editTimestamp,
       lastUpdatedAt: new Date().toISOString(),
     };
 
     inMemoryServerState = updated;
     const serialized = JSON.stringify(updated, null, 2);
 
-    try {
-      const dir = path.dirname(LOCAL_PERSISTED_FILE);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+    const writeSafe = (targetPath: string) => {
+      try {
+        const dir = path.dirname(targetPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        const tempPath = `${targetPath}.tmp.${Date.now()}`;
+        fs.writeFileSync(tempPath, serialized, 'utf8');
+        fs.renameSync(tempPath, targetPath);
+      } catch (err) {
+        try {
+          fs.writeFileSync(targetPath, serialized, 'utf8');
+        } catch (e) {
+          console.warn(`Write notice for ${targetPath}:`, e);
+        }
       }
-      fs.writeFileSync(LOCAL_PERSISTED_FILE, serialized, 'utf8');
-    } catch (e) {
-      console.warn('Could not write LOCAL_PERSISTED_FILE:', e);
-    }
+    };
 
-    try {
-      fs.writeFileSync(SERVER_DATA_FILE, serialized, 'utf8');
-    } catch (e) {
-      console.warn('Could not write SERVER_DATA_FILE:', e);
-    }
+    writeSafe(LOCAL_PERSISTED_FILE);
+    writeSafe(BACKUP_PERSISTED_FILE);
+    writeSafe(SERVER_DATA_FILE);
 
     return updated;
   } catch (err) {
