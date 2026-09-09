@@ -21,13 +21,12 @@ import {
   X,
   Film,
   Users,
-  Shield,
   Loader2
 } from 'lucide-react';
 import Image from 'next/image';
 
 export function Hero() {
-  const { data, setIsAdminOpen } = useChurch();
+  const { data } = useChurch();
   const activity = data.currentActivity;
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -547,15 +546,6 @@ export function Hero() {
                 Aguardando a publicação das informações oficiais...
               </p>
             </div>
-
-            <button
-              id="hero-btn-admin-config"
-              onClick={() => setIsAdminOpen(true)}
-              className="mt-1 inline-flex items-center gap-2 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-neutral-950 bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-lg"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Acessar Painel de Gestão</span>
-            </button>
           </div>
         )}
 
