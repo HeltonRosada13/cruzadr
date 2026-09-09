@@ -23,21 +23,21 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Igreja Catedral de Amor e Fé | Atividades, Louvor e Comunhão',
+  title: 'Portal da Igreja | Atividades, Louvor e Comunhão',
   description:
-    'Portal oficial da Igreja Catedral de Amor e Fé. Um lugar de fé, amor, comunhão e transformação. Confira nossas conferências, fotos, vídeos, horários e canais de atendimento.',
+    'Portal oficial de atividades, programação e mídias da igreja. Desenvolvido por Baobá Universe.',
   openGraph: {
-    title: 'Igreja Catedral de Amor e Fé | Atividades, Louvor e Comunhão',
+    title: 'Portal da Igreja | Atividades, Louvor e Comunhão',
     description:
-      'Portal oficial da Igreja Catedral de Amor e Fé. Desenvolvido por Baobá Universe.',
+      'Portal oficial de atividades, fotos, vídeos e canais da igreja. Desenvolvido por Baobá Universe.',
     type: 'website',
     locale: 'pt_PT',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Igreja Catedral de Amor e Fé',
+    title: 'Portal da Igreja',
     description:
-      'Portal oficial da Igreja Catedral de Amor e Fé. Um lugar de fé, amor e comunhão.',
+      'Portal oficial de atividades, programação e mídias da igreja.',
   },
 };
 

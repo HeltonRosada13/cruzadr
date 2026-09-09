@@ -10,6 +10,8 @@ export function WhatsAppFloating() {
   const [userMsg, setUserMsg] = useState('');
   const [showTooltip, setShowTooltip] = useState(false);
 
+  const whatsappCleanNumber = (data.whatsappNumber || '').replace(/\D/g, '');
+
   useEffect(() => {
     // Show gentle teaser tooltip after 4 seconds
     const timer = setTimeout(() => {
@@ -18,7 +20,9 @@ export function WhatsAppFloating() {
     return () => clearTimeout(timer);
   }, []);
 
-  const whatsappCleanNumber = data.whatsappNumber.replace(/\D/g, '');
+  if (!data.whatsappNumber || data.whatsappNumber.trim() === '' || !whatsappCleanNumber) {
+    return null;
+  }
 
   const handleSendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -43,7 +47,7 @@ export function WhatsAppFloating() {
                 <MessageCircle className="w-4 h-4 fill-current" />
               </div>
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider leading-tight">Atendimento Catedral</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider leading-tight">{data.churchName ? `Atendimento • ${data.churchName}` : 'Atendimento Oficial'}</h4>
                 <p className="text-[10px] text-[#C5A059] flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Online • Canal Oficial
@@ -65,7 +69,7 @@ export function WhatsAppFloating() {
                 Paz seja convosco! 🙏
               </p>
               <p className="leading-relaxed">
-                Bem-vindo ao canal de atendimento da <strong>Igreja Catedral de Amor e Fé</strong>.
+                Bem-vindo ao canal oficial de atendimento{data.churchName ? <> da <strong>{data.churchName}</strong></> : ''}.
                 Como podemos ajudar hoje? Você pode tirar dúvidas sobre a atividade, pedir oração ou saber como participar!
               </p>
               <span className="text-[9px] text-neutral-400 block text-right mt-1.5 flex items-center justify-end gap-1">

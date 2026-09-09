@@ -60,7 +60,7 @@ export function Testimonials() {
         </h2>
         <div className="w-12 h-[1px] bg-[#C5A059] mx-auto mt-4" />
         <p className="mt-4 text-sm sm:text-base text-neutral-600 font-light leading-relaxed">
-          Relatos sinceros de vidas tocadas e abençoadas nas atividades da Igreja Catedral de Amor e Fé.
+          Relatos sinceros de vidas tocadas e abençoadas nas atividades{data.churchName ? ` da ${data.churchName}` : ''}.
         </p>
       </div>
 

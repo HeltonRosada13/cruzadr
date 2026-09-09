@@ -2,7 +2,7 @@
   "entities": {
     "ChurchData": {
       "title": "Church Data Document",
-      "description": "Stores all persistent data, activities, schedule, pastorate, gallery, and settings for Catedral de Amor e Fé",
+      "description": "Stores all persistent data, activities, schedule, pastorate, gallery, and settings for the church",
       "type": "object",
       "properties": {
         "churchInfo": { "type": "object", "description": "General church details" },

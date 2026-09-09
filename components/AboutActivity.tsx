@@ -25,15 +25,16 @@ export function AboutActivity() {
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
+    const churchSuffix = data.churchName ? ` — ${data.churchName}` : '';
     if (navigator.share) {
       navigator.share({
-        title: `${activity.name} — Igreja Catedral de Amor e Fé`,
+        title: `${activity.name}${churchSuffix}`,
         text: `${activity.name}: ${activity.subtitle}\nData: ${activity.formattedDate} às ${activity.time}\nLocal: ${activity.location}`,
         url: window.location.href,
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(
-        `${activity.name} — Igreja Catedral de Amor e Fé\nData: ${activity.formattedDate} às ${activity.time}\nLocal: ${activity.location}\n${window.location.href}`
+        `${activity.name}${churchSuffix}\nData: ${activity.formattedDate} às ${activity.time}\nLocal: ${activity.location}\n${window.location.href}`
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
@@ -41,7 +42,8 @@ export function AboutActivity() {
   };
 
   const handleAddToGoogleCalendar = () => {
-    const title = encodeURIComponent(`${activity.name} - Igreja Catedral de Amor e Fé`);
+    const churchSuffix = data.churchName ? ` - ${data.churchName}` : '';
+    const title = encodeURIComponent(`${activity.name}${churchSuffix}`);
     const details = encodeURIComponent(`${activity.subtitle}\nTema: ${activity.theme}\n${activity.importantNotes}`);
     const location = encodeURIComponent(`${activity.location}, ${activity.address}`);
     

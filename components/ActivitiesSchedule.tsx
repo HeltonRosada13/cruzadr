@@ -66,7 +66,7 @@ export function ActivitiesSchedule() {
           </h2>
           <div className="w-12 h-[1px] bg-[#C5A059] mx-auto mt-4" />
           <p className="mt-4 text-sm sm:text-base text-neutral-600 font-light leading-relaxed">
-            Fique por dentro das próximas reuniões, seminários, conferências de juventude e ações comunitárias da Catedral de Amor e Fé.
+            Fique por dentro das próximas reuniões, seminários, conferências e programações especiais{data.churchName ? ` da ${data.churchName}` : ''}.
           </p>
         </div>
 

@@ -383,7 +383,7 @@ export function VideoGallery() {
     if (navigator.share) {
       navigator.share({
         title: video.title,
-        text: `${video.title} — Igreja Catedral de Amor e Fé`,
+        text: `${video.title}${data.churchName ? ` — ${data.churchName}` : ''}`,
         url: shareUrl,
       }).catch(() => {});
     } else {
@@ -416,7 +416,7 @@ export function VideoGallery() {
         </h2>
         <div className="w-12 h-[1px] bg-[#C5A059] mx-auto mt-4" />
         <p className="mt-4 text-sm sm:text-base text-neutral-600 font-light leading-relaxed">
-          Assista às mensagens inspiradoras, ministrações de louvor e transmissões que tocaram vidas na Catedral de Amor e Fé.
+          Assista às mensagens inspiradoras, ministrações de louvor e transmissões que tocaram vidas{data.churchName ? ` na ${data.churchName}` : ''}.
         </p>
       </div>
 
@@ -844,7 +844,7 @@ export function VideoGallery() {
                   {selectedVideo.description}
                 </p>
                 <p className="text-[10px] uppercase tracking-widest text-[#C5A059] mt-1">
-                  Duração: {selectedVideo.duration} • Igreja Catedral de Amor e Fé
+                  Duração: {selectedVideo.duration}{data.churchName ? ` • ${data.churchName}` : ''}
                 </p>
               </div>
 

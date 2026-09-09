@@ -96,7 +96,7 @@ export function PhotoGallery() {
     if (navigator.share) {
       navigator.share({
         title: photo.title,
-        text: `${photo.title} — Igreja Catedral de Amor e Fé`,
+        text: `${photo.title}${data.churchName ? ` — ${data.churchName}` : ''}`,
         url: photo.imageUrl,
       }).catch(() => {});
     } else {

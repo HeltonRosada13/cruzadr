@@ -1,5 +1,5 @@
 // Native browser IndexedDB storage for uploaded video files to ensure local persistence
-const DB_NAME = 'CatedralAmorEFe_MediaDB';
+const DB_NAME = 'ChurchPortal_MediaDB';
 const STORE_NAME = 'videos';
 
 function openDB(): Promise<IDBDatabase> {

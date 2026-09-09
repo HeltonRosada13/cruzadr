@@ -144,7 +144,7 @@ export function SocialMediaSection() {
       {/* Safety / Official Note */}
       <div className="mt-8 p-4 rounded-sm bg-neutral-50 border border-neutral-200/80 flex items-center justify-center gap-2 text-center text-xs text-neutral-500 font-light">
         <ShieldCheck className="w-4 h-4 text-[#C5A059] flex-shrink-0" />
-        <span>Estes são os únicos canais digitais oficiais autorizados pela Igreja Catedral de Amor e Fé.</span>
+        <span>Estes são os únicos canais digitais oficiais autorizados{data.churchName ? ` pela ${data.churchName}` : ''}.</span>
       </div>
     </section>
   );

@@ -217,9 +217,9 @@ function AdminManagerModalInner() {
     heroEyebrow: data.currentActivity?.heroEyebrow || '',
   });
   const [churchForm, setChurchForm] = useState({
-    churchName: data.churchName || 'Igreja Catedral de Amor e Fé',
-    logoPrefix: data.logoPrefix || 'Catedral de',
-    logoSuffix: data.logoSuffix || 'Amor e Fé',
+    churchName: data.churchName || '',
+    logoPrefix: data.logoPrefix || '',
+    logoSuffix: data.logoSuffix || '',
     logoImageUrl: data.logoImageUrl || '',
     churchMotto: data.churchMotto || '',
     churchAbout: data.churchAbout || '',
@@ -273,11 +273,11 @@ function AdminManagerModalInner() {
   // Testimony input & edit states
   const [newTestimony, setNewTestimony] = useState({
     name: '',
-    role: 'Membro da Catedral',
+    role: 'Membro / Visitante',
     avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
     content: '',
-    activityName: data.currentActivity?.name || 'Culto da Família',
-    date: 'Agosto de 2026',
+    activityName: data.currentActivity?.name || '',
+    date: '',
   });
 
   const [editingTestimonyId, setEditingTestimonyId] = useState<string | null>(null);
@@ -292,8 +292,8 @@ function AdminManagerModalInner() {
       }
       setChurchForm({
         churchName: data.churchName || '',
-        logoPrefix: data.logoPrefix !== undefined ? data.logoPrefix : 'Catedral de',
-        logoSuffix: data.logoSuffix !== undefined ? data.logoSuffix : 'Amor e Fé',
+        logoPrefix: data.logoPrefix || '',
+        logoSuffix: data.logoSuffix || '',
         logoImageUrl: data.logoImageUrl || '',
         churchMotto: data.churchMotto || '',
         churchAbout: data.churchAbout || '',
@@ -363,8 +363,8 @@ function AdminManagerModalInner() {
             .replace(/\b\w/g, (c) => c.toUpperCase());
 
           batchList.push({
-            title: cleanName || `Momento Catedral #${data.photos.length + batchList.length + 1}`,
-            description: 'Fotografia oficial da igreja catedral de amor e fé',
+            title: cleanName || `Momento #${data.photos.length + batchList.length + 1}`,
+            description: 'Fotografia oficial da atividade',
             imageUrl: result.dataUrl,
             category: newPhoto.category || 'Louvor',
             date: 'Atividade Recente',
@@ -601,9 +601,9 @@ function AdminManagerModalInner() {
       countdownTarget: '',
     });
     setChurchForm({
-      churchName: 'Igreja Catedral de Amor e Fé',
-      logoPrefix: 'Catedral de',
-      logoSuffix: 'Amor e Fé',
+      churchName: '',
+      logoPrefix: '',
+      logoSuffix: '',
       logoImageUrl: '',
       churchMotto: '',
       churchAbout: '',
@@ -953,17 +953,17 @@ function AdminManagerModalInner() {
       role: newTestimony.role.trim() || 'Membro da Igreja',
       avatarUrl: newTestimony.avatarUrl.trim() || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
       content: newTestimony.content.trim(),
-      activityName: newTestimony.activityName.trim() || data.currentActivity?.name || 'Culto da Catedral',
-      date: newTestimony.date.trim() || 'Agosto de 2026',
+      activityName: newTestimony.activityName.trim() || data.currentActivity?.name || 'Culto Geral',
+      date: newTestimony.date.trim() || '',
     });
 
     setNewTestimony({
       name: '',
-      role: 'Membro da Catedral',
+      role: 'Membro / Visitante',
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=faces&q=80',
       content: '',
-      activityName: data.currentActivity?.name || 'Culto da Família',
-      date: 'Agosto de 2026',
+      activityName: data.currentActivity?.name || '',
+      date: '',
     });
 
     showNotification('Testemunho publicado e salvo permanentemente!');
@@ -1096,7 +1096,7 @@ function AdminManagerModalInner() {
           <div className="pt-2 border-t border-neutral-100 text-center">
             <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-mono flex items-center justify-center gap-1">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              Ambiente Seguro • Catedral de Amor e Fé
+              Ambiente Seguro • Painel de Gestão
             </span>
           </div>
         </div>
@@ -1903,7 +1903,7 @@ function AdminManagerModalInner() {
                     <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 block mb-1">Título da Foto</label>
                     <input
                       type="text"
-                      placeholder="Ex: Coral Catedral em Adoração"
+                      placeholder="Ex: Momento de Louvor / Oração"
                       value={newPhoto.title}
                       onChange={(e) => setNewPhoto({ ...newPhoto, title: e.target.value })}
                       className="w-full px-3 py-2 rounded-sm bg-neutral-50 border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
@@ -3124,7 +3124,7 @@ function AdminManagerModalInner() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Membro da Catedral / Visitante"
+                      placeholder="Ex: Membro / Visitante"
                       value={newTestimony.role}
                       onChange={(e) => setNewTestimony({ ...newTestimony, role: e.target.value })}
                       className="w-full px-3 py-2 rounded-sm bg-white border border-neutral-300 text-xs text-neutral-900 focus:outline-none focus:border-black"
@@ -3956,7 +3956,7 @@ function AdminManagerModalInner() {
                     { platform: 'TikTok' as SocialPlatform, label: '+ TikTok', defaultName: 'TikTok Oficial', badge: 'Vídeos', desc: 'Vídeos curtos, mensagens e momentos inspiradores' },
                     { platform: 'Spotify' as SocialPlatform, label: '+ Spotify / Podcast', defaultName: 'Spotify - Mensagens & Louvores', badge: 'Áudio', desc: 'Ouça mensagens bíblicas e louvores em qualquer lugar' },
                     { platform: 'Telegram' as SocialPlatform, label: '+ Telegram', defaultName: 'Canal Oficial Telegram', badge: 'Devocionais', desc: 'Devocionais diários, estudos bíblicos e avisos' },
-                    { platform: 'Website' as SocialPlatform, label: '+ Site / Portal', defaultName: 'Portal Oficial', badge: 'Web', desc: 'Portal oficial da Catedral de Amor e Fé' },
+                    { platform: 'Website' as SocialPlatform, label: '+ Site / Portal', defaultName: 'Portal Oficial', badge: 'Web', desc: 'Portal oficial da igreja' },
                   ].map((preset) => (
                     <button
                       key={preset.label}
@@ -4237,12 +4237,12 @@ function AdminManagerModalInner() {
                             url = digits ? `https://wa.me/${digits}` : line;
                             handle = line.startsWith('http') ? (digits ? `+${digits}` : line) : line;
                             name = `WhatsApp Oficial ${data.socialLinks.length + idx + 1}`;
-                            description = 'Atendimento e contato direto com a Catedral de Amor e Fé';
+                            description = 'Atendimento e contato direto com a igreja';
                             badgeText = 'Atendimento';
                           } else if (lower.includes('instagram.com')) {
                             platform = 'Instagram';
                             const match = line.match(/instagram\.com\/([a-zA-Z0-9_.-]+)/);
-                            handle = match ? `@${match[1]}` : '@catedraldeamorefe';
+                            handle = match ? `@${match[1]}` : '@igrejaoficial';
                             name = 'Instagram Oficial';
                             description = 'Fotos, transmissões, bastidores e avisos diários da igreja';
                           } else if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
@@ -4255,18 +4255,18 @@ function AdminManagerModalInner() {
                           } else if (lower.includes('facebook.com') || lower.includes('fb.com') || lower.includes('fb.watch')) {
                             platform = 'Facebook';
                             name = 'Facebook Oficial';
-                            handle = 'Página da Catedral';
+                            handle = 'Página Oficial';
                             description = 'Acompanhe novidades, eventos e transmissões oficiais';
                           } else if (lower.includes('tiktok.com')) {
                             platform = 'TikTok';
                             const match = line.match(/tiktok\.com\/(@[a-zA-Z0-9_.-]+)/);
-                            handle = match ? match[1] : '@catedraldeamorefe';
+                            handle = match ? match[1] : '@igrejaoficial';
                             name = 'TikTok Oficial';
                             description = 'Vídeos curtos, mensagens de fé e momentos inspiradores';
                           } else if (lower.includes('spotify.com')) {
                             platform = 'Spotify';
                             name = 'Spotify & Podcasts';
-                            handle = 'Catedral Play';
+                            handle = 'Podcasts & Louvores';
                             description = 'Ouça mensagens bíblicas e louvores em qualquer lugar';
                             badgeText = 'Podcasts';
                           } else if (lower.includes('t.me') || lower.includes('telegram')) {
@@ -4278,12 +4278,12 @@ function AdminManagerModalInner() {
                           } else if (lower.includes('twitter.com') || lower.includes('x.com')) {
                             platform = 'X';
                             const match = line.match(/(?:twitter|x)\.com\/([a-zA-Z0-9_.-]+)/);
-                            handle = match ? `@${match[1]}` : '@catedral';
+                            handle = match ? `@${match[1]}` : '@igreja';
                             name = 'X (Twitter) Oficial';
-                            description = 'Reflexões e notícias rápidas da Catedral de Amor e Fé';
+                            description = 'Reflexões e notícias rápidas da igreja';
                           } else if (lower.includes('radio') || lower.includes('fm')) {
                             platform = 'Rádio';
-                            name = 'Rádio Amor e Fé Web';
+                            name = 'Rádio Web Gospel';
                             handle = '24 Horas no Ar';
                             description = 'Programação gospel, orações e louvores sem interrupções';
                             badgeText = '24 Horas';
@@ -4291,7 +4291,7 @@ function AdminManagerModalInner() {
                             platform = 'Website';
                             name = `Portal Oficial ${data.socialLinks.length + idx + 1}`;
                             handle = 'Link Externo';
-                            description = 'Portal oficial e informações da Catedral de Amor e Fé';
+                            description = 'Portal oficial e informações da igreja';
                           }
 
                           if (!url.startsWith('http://') && !url.startsWith('https://') && platform !== 'WhatsApp') {
@@ -4727,10 +4727,10 @@ function AdminManagerModalInner() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] tracking-[0.3em] font-light text-neutral-400 uppercase leading-tight">
-                        {churchForm.logoPrefix || 'Catedral de'}
+                        {churchForm.logoPrefix || 'Nome / Prefixo'}
                       </span>
                       <span className="text-base sm:text-lg font-bold tracking-tighter leading-none text-neutral-900">
-                        {churchForm.logoSuffix || 'Amor e Fé'}
+                        {churchForm.logoSuffix || churchForm.churchName || 'Identidade da Igreja'}
                       </span>
                     </div>
                   </div>
@@ -4816,7 +4816,7 @@ function AdminManagerModalInner() {
                       type="text"
                       value={churchForm.logoPrefix || ''}
                       onChange={(e) => setChurchForm({ ...churchForm, logoPrefix: e.target.value })}
-                      placeholder="Ex: Catedral de ou Igreja"
+                      placeholder="Ex: Igreja ou Comunidade"
                       className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059]"
                     />
                     <span className="text-[10px] text-neutral-400 mt-0.5 block">
@@ -4832,7 +4832,7 @@ function AdminManagerModalInner() {
                       type="text"
                       value={churchForm.logoSuffix || ''}
                       onChange={(e) => setChurchForm({ ...churchForm, logoSuffix: e.target.value })}
-                      placeholder="Ex: Amor e Fé ou Dunamis Angola"
+                      placeholder="Ex: Comunidade da Graça ou Vida Plena"
                       className="w-full px-3 py-2 rounded-sm bg-neutral-800 border border-neutral-600 text-xs text-white focus:outline-none focus:border-[#C5A059] font-bold"
                     />
                     <span className="text-[10px] text-neutral-400 mt-0.5 block">

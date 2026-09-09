@@ -82,6 +82,10 @@ export function CountdownTimer({ targetDateString }: CountdownTimerProps) {
   const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const currentTime = useSyncExternalStore(subscribeToTime, getClientTime, getServerTime);
 
+  if (!targetDateString || targetDateString.trim() === '' || isNaN(new Date(targetDateString).getTime())) {
+    return null;
+  }
+
   const timeLeft = getTimeDifference(targetDateString, isClient ? currentTime : 0);
 
   if (isClient && timeLeft.isPast) {

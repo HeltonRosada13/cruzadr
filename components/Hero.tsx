@@ -20,14 +20,13 @@ import {
   ExternalLink,
   X,
   Film,
-  Users
+  Users,
+  Shield
 } from 'lucide-react';
 import Image from 'next/image';
 
-const DEFAULT_FALLBACK_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-
 export function Hero() {
-  const { data } = useChurch();
+  const { data, setIsAdminOpen } = useChurch();
   const activity = data.currentActivity;
   const sectionRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -44,17 +43,39 @@ export function Hero() {
   const youtubeIframeRef = useRef<HTMLIFrameElement>(null);
 
   // Single main information title (avoids duplicate titles/eyebrows)
-  const singleTitle = (activity.name && activity.name.trim() !== '')
+  const hasChurchName = Boolean(data.churchName && data.churchName.trim() !== '');
+  const hasActivityName = Boolean(activity.name && activity.name.trim() !== '');
+  const singleTitle = hasActivityName
     ? activity.name.trim()
-    : (data.churchName && data.churchName.trim() !== '')
+    : hasChurchName
       ? data.churchName.trim()
-      : 'Igreja Catedral de Amor e Fé';
-  const currentHeroVideoUrl = activity.heroVideo || '';
-  const isYouTube = isYouTubeVideoUrl(currentHeroVideoUrl) || isYouTubeVideoUrl(customBlobUrl);
+      : '';
+
+  const currentHeroVideoUrl = (activity.heroVideo || '').trim();
+  const hasVideo = Boolean(customBlobUrl || currentHeroVideoUrl !== '');
+  const isYouTube = hasVideo && (isYouTubeVideoUrl(currentHeroVideoUrl) || (customBlobUrl ? isYouTubeVideoUrl(customBlobUrl) : false));
   const rawVideo = isYouTube
     ? (isYouTubeVideoUrl(currentHeroVideoUrl) ? currentHeroVideoUrl : (customBlobUrl || currentHeroVideoUrl))
-    : (customBlobUrl || currentHeroVideoUrl || DEFAULT_FALLBACK_VIDEO);
-  const videoSrc = (!isYouTube ? rawVideo : null) || DEFAULT_FALLBACK_VIDEO;
+    : (customBlobUrl || currentHeroVideoUrl || '');
+  const videoSrc = (!isYouTube && hasVideo) ? rawVideo : null;
+
+  const hasActivityDetails = Boolean(
+    (activity.description && activity.description.trim() !== '') ||
+    (activity.theme && activity.theme.trim() !== '') ||
+    (activity.formattedDate && activity.formattedDate.trim() !== '') ||
+    (activity.location && activity.location.trim() !== '') ||
+    (activity.date && activity.date.trim() !== '')
+  );
+  const hasAnyActivityInfo = hasActivityName || hasActivityDetails;
+
+  const hasAbout = Boolean(activity.description || activity.name || activity.theme);
+  const hasHighlights = Boolean(data.highlights && data.highlights.length > 0);
+  const hasPhotos = Boolean(data.photos && data.photos.length > 0);
+  const hasVideos = Boolean(data.videos && data.videos.length > 0);
+  const hasEvents = Boolean(data.upcomingEvents && data.upcomingEvents.length > 0);
+  const hasTestimonies = Boolean(data.testimonies && data.testimonies.length > 0);
+  const hasSocial = Boolean(data.socialLinks && data.socialLinks.length > 0);
+  const hasBelowSections = hasAbout || hasHighlights || hasPhotos || hasVideos || hasEvents || hasTestimonies || hasSocial;
 
   // Always resolve the best YouTube link for the church
   const resolvedYouTubeUrl = isYouTubeVideoUrl(rawVideo)
@@ -63,7 +84,7 @@ export function Hero() {
         ? activity.heroVideo
         : (isYouTubeVideoUrl(activity.videoPromoUrl)
             ? activity.videoPromoUrl
-            : (data.videos?.find((v) => isYouTubeVideoUrl(v.videoUrl))?.videoUrl || 'https://www.youtube.com/watch?v=ScMzIvxBSi4')));
+            : (data.videos?.find((v) => isYouTubeVideoUrl(v.videoUrl))?.videoUrl || '')));
 
   // Hydrate local video blob on mount or when uploaded
   useEffect(() => {
@@ -322,33 +343,36 @@ export function Hero() {
       id="inicio"
       className="relative min-h-[90vh] lg:min-h-[95vh] flex flex-col justify-center items-center pt-28 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden bg-neutral-900 border-b border-neutral-200"
     >
-      {/* Background Video with Cinematic Editorial Dark Gradient Overlays */}
-      <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-        {isYouTube ? (
-          <iframe
-            ref={youtubeIframeRef}
-            src={formatYouTubeEmbedUrl(rawVideo, true, true)}
-            title={activity.name}
-            className="w-full h-full border-0 absolute inset-0 pointer-events-none scale-125"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
+      {/* Background Video with Cinematic Editorial Dark Gradient Overlays or Clean Ambient Canvas */}
+      <div className="absolute inset-0 z-0 overflow-hidden bg-[#141414]">
+        {hasVideo ? (
+          isYouTube ? (
+            <iframe
+              ref={youtubeIframeRef}
+              src={formatYouTubeEmbedUrl(rawVideo, true, true)}
+              title={activity.name || data.churchName}
+              className="w-full h-full border-0 absolute inset-0 pointer-events-none scale-125"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              key={videoSrc || 'empty'}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              className="w-full h-full object-cover object-center scale-105 transition-all duration-700"
+            >
+              {videoSrc && <source src={videoSrc} type="video/mp4" />}
+            </video>
+          )
         ) : (
-          <video
-            ref={videoRef}
-            key={videoSrc}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            className="w-full h-full object-cover object-center scale-105 transition-all duration-700"
-          >
-            <source src={videoSrc} type="video/mp4" />
-            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4" />
-          </video>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(197,160,89,0.18),rgba(20,20,20,0))]" />
         )}
 
         {/* Balanced Cinematic Overlays - Video is clearly visible and vivid */}
@@ -356,76 +380,78 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-10 pointer-events-none" />
       </div>
 
-      {/* Floating Audio Controls - Always active in Hero, deactivates when scrolling down to other sections */}
-      <div 
-        id="hero-floating-audio-control"
-        className={`fixed bottom-20 right-4 sm:bottom-22 sm:right-6 z-30 flex items-center gap-2 bg-black/90 backdrop-blur-md border border-white/25 px-3.5 py-2 rounded-full text-white text-[10px] font-semibold tracking-wider shadow-2xl transition-all duration-400 ease-out ${
-          isHeroVisible 
-            ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' 
-            : 'opacity-0 translate-y-6 scale-95 pointer-events-none'
-        }`}
-      >
-        <span className={`w-2 h-2 rounded-full mr-0.5 ${!isMuted ? 'bg-emerald-500 animate-pulse' : 'bg-[#C5A059]'}`} />
-        <span className="uppercase text-neutral-300 text-[9px] sm:text-[10px] hidden xs:inline">
-          {isYouTube ? 'Áudio do Vídeo' : 'Vídeo Ao Vivo'}
-        </span>
-        <div className="w-[1px] h-3 bg-white/20 mx-0.5 hidden xs:block" />
-        
-        {/* Main Audio Button requested by user */}
-        <button
-          id="hero-btn-toggle-sound"
-          onClick={toggleSound}
-          aria-label={isMuted ? 'Ouvir áudio do vídeo' : 'Silenciar áudio do vídeo'}
-          className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-bold text-[9px] sm:text-[10px] shadow-md ${
-            !isMuted 
-              ? 'bg-[#C5A059] hover:bg-[#B58E45] text-white ring-2 ring-[#C5A059]/50' 
-              : 'bg-white/20 hover:bg-white/30 text-white border border-white/25 hover:border-white/40'
+      {/* Floating Audio Controls - Only displayed if there is an active video */}
+      {hasVideo && (
+        <div 
+          id="hero-floating-audio-control"
+          className={`fixed bottom-20 right-4 sm:bottom-22 sm:right-6 z-30 flex items-center gap-2 bg-black/90 backdrop-blur-md border border-white/25 px-3.5 py-2 rounded-full text-white text-[10px] font-semibold tracking-wider shadow-2xl transition-all duration-400 ease-out ${
+            isHeroVisible 
+              ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' 
+              : 'opacity-0 translate-y-6 scale-95 pointer-events-none'
           }`}
-          title={isMuted ? 'Clique para ouvir o áudio do vídeo' : 'Áudio ativo - Clique para silenciar'}
         >
-          {isMuted ? (
-            <>
-              <VolumeX className="w-3.5 h-3.5 text-neutral-200" />
-              <span className="uppercase tracking-wider">Ouvir Áudio do Vídeo</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-3.5 h-3.5 animate-pulse text-white" />
-              <span className="uppercase tracking-wider font-extrabold text-white">Ouvindo Áudio</span>
-              <span className="flex items-end gap-0.5 h-2.5 ml-0.5">
-                <span className="w-0.5 h-2 bg-white rounded-full animate-pulse" />
-                <span className="w-0.5 h-3 bg-white rounded-full animate-pulse delay-75" />
-                <span className="w-0.5 h-1.5 bg-white rounded-full animate-pulse delay-150" />
-              </span>
-            </>
-          )}
-        </button>
-
-        {!isYouTube && (
+          <span className={`w-2 h-2 rounded-full mr-0.5 ${!isMuted ? 'bg-emerald-500 animate-pulse' : 'bg-[#C5A059]'}`} />
+          <span className="uppercase text-neutral-300 text-[9px] sm:text-[10px] hidden xs:inline">
+            {isYouTube ? 'Áudio do Vídeo' : 'Vídeo Ao Vivo'}
+          </span>
+          <div className="w-[1px] h-3 bg-white/20 mx-0.5 hidden xs:block" />
+          
+          {/* Main Audio Button requested by user */}
           <button
-            id="hero-btn-toggle-play"
-            onClick={togglePlay}
-            aria-label={isPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
-            className="p-1 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            title={isPlaying ? 'Pausar Vídeo' : 'Reproduzir Vídeo'}
+            id="hero-btn-toggle-sound"
+            onClick={toggleSound}
+            aria-label={isMuted ? 'Ouvir áudio do vídeo' : 'Silenciar áudio do vídeo'}
+            className={`px-3 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-bold text-[9px] sm:text-[10px] shadow-md ${
+              !isMuted 
+                ? 'bg-[#C5A059] hover:bg-[#B58E45] text-white ring-2 ring-[#C5A059]/50' 
+                : 'bg-white/20 hover:bg-white/30 text-white border border-white/25 hover:border-white/40'
+            }`}
+            title={isMuted ? 'Clique para ouvir o áudio do vídeo' : 'Áudio ativo - Clique para silenciar'}
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            {isMuted ? (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-neutral-200" />
+                <span className="uppercase tracking-wider">Ouvir Áudio do Vídeo</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 animate-pulse text-white" />
+                <span className="uppercase tracking-wider font-extrabold text-white">Ouvindo Áudio</span>
+                <span className="flex items-end gap-0.5 h-2.5 ml-0.5">
+                  <span className="w-0.5 h-2 bg-white rounded-full animate-pulse" />
+                  <span className="w-0.5 h-3 bg-white rounded-full animate-pulse delay-75" />
+                  <span className="w-0.5 h-1.5 bg-white rounded-full animate-pulse delay-150" />
+                </span>
+              </>
+            )}
           </button>
-        )}
 
-        {isYouTube && (
-          <a
-            id="hero-btn-open-youtube"
-            href={getYouTubeWatchUrl(rawVideo)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:text-[#C5A059] text-neutral-300 transition-colors"
-            title="Abrir no YouTube"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        )}
-      </div>
+          {!isYouTube && (
+            <button
+              id="hero-btn-toggle-play"
+              onClick={togglePlay}
+              aria-label={isPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
+              className="p-1 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              title={isPlaying ? 'Pausar Vídeo' : 'Reproduzir Vídeo'}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
+          {isYouTube && (
+            <a
+              id="hero-btn-open-youtube"
+              href={getYouTubeWatchUrl(rawVideo)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 hover:text-[#C5A059] text-neutral-300 transition-colors"
+              title="Abrir no YouTube"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="relative z-20 max-w-5xl mx-auto text-center flex flex-col items-center">
@@ -442,14 +468,16 @@ export function Hero() {
           </button>
         )}
 
-        {/* Single Main Information Title (Exact single piece of information, no duplicates) */}
-        <h1
-          id="hero-activity-title"
-          suppressHydrationWarning
-          className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.95] mb-8 max-w-4xl drop-shadow-md"
-        >
-          {singleTitle}
-        </h1>
+        {/* Single Main Information Title (Rendered only when activity name or church name is set by admin) */}
+        {singleTitle ? (
+          <h1
+            id="hero-activity-title"
+            suppressHydrationWarning
+            className="text-white text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-editorial italic font-normal tracking-tight leading-[0.95] mb-8 max-w-4xl drop-shadow-md"
+          >
+            {singleTitle}
+          </h1>
+        ) : null}
 
         {/* Quick event meta badges */}
         {(activity.formattedDate || activity.location) && (
@@ -473,28 +501,46 @@ export function Hero() {
           </div>
         )}
 
-        {/* Visitor Action Buttons: SABER MAIS & GALERIA */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-10">
-          <button
-            id="hero-btn-saber-mais"
-            onClick={() => scrollToSection('#sobre')}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-md"
-          >
-            <span>Saber Mais</span>
-            <ArrowDown className="w-3.5 h-3.5" />
-          </button>
+        {/* Visitor Action Buttons or Waiting/Admin Callout */}
+        {hasAnyActivityInfo ? (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-10">
+            {hasAbout && (
+              <button
+                id="hero-btn-saber-mais"
+                onClick={() => scrollToSection('#sobre')}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-md"
+              >
+                <span>Saber Mais</span>
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            )}
 
-          {((data.photos && data.photos.length > 0) || (data.videos && data.videos.length > 0)) && (
+            {((data.photos && data.photos.length > 0) || (data.videos && data.videos.length > 0)) && (
+              <button
+                id="hero-btn-ver-fotos-videos"
+                onClick={() => scrollToSection(data.photos && data.photos.length > 0 ? '#fotos' : '#videos')}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white border border-white/35 hover:border-white hover:bg-white/10 rounded-sm backdrop-blur-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                <Images className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span>Galeria</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-4 w-full max-w-lg mx-auto mb-10">
+            <p className="text-xs sm:text-sm text-neutral-300 font-light max-w-md mx-auto leading-relaxed">
+              {data.churchMotto || 'O conteúdo e as programações deste site serão exibidos assim que o administrador publicar as informações oficiais.'}
+            </p>
             <button
-              id="hero-btn-ver-fotos-videos"
-              onClick={() => scrollToSection(data.photos && data.photos.length > 0 ? '#fotos' : '#videos')}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 text-[11px] font-bold uppercase tracking-widest text-white border border-white/35 hover:border-white hover:bg-white/10 rounded-sm backdrop-blur-sm transition-all transform hover:-translate-y-0.5 cursor-pointer"
+              id="hero-btn-admin-config"
+              onClick={() => setIsAdminOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 text-[11px] font-bold uppercase tracking-widest text-neutral-950 bg-[#C5A059] hover:bg-[#B58E45] rounded-sm transition-all transform hover:-translate-y-0.5 cursor-pointer shadow-lg"
             >
-              <Images className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>Galeria</span>
+              <Shield className="w-3.5 h-3.5" />
+              <span>Acessar Painel de Gestão</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Real-time Countdown Timer component */}
         {(activity.date || activity.countdownTarget) && (
@@ -506,16 +552,18 @@ export function Hero() {
       </div>
 
       {/* Down Scroll Indicator */}
-      <div className="mt-8 z-20 flex flex-col items-center">
-        <button
-          onClick={() => scrollToSection('#sobre')}
-          aria-label="Rolar para baixo"
-          className="text-neutral-400 hover:text-white transition-colors flex flex-col items-center gap-1 cursor-pointer"
-        >
-          <span className="text-[10px] uppercase tracking-[0.3em] font-medium">Explorar Programação</span>
-          <ChevronDown className="w-3.5 h-3.5 animate-bounce text-[#C5A059]" />
-        </button>
-      </div>
+      {hasBelowSections && (
+        <div className="mt-8 z-20 flex flex-col items-center">
+          <button
+            onClick={() => scrollToSection('#sobre')}
+            aria-label="Rolar para baixo"
+            className="text-neutral-400 hover:text-white transition-colors flex flex-col items-center gap-1 cursor-pointer"
+          >
+            <span className="text-[10px] uppercase tracking-[0.3em] font-medium">Explorar Programação</span>
+            <ChevronDown className="w-3.5 h-3.5 animate-bounce text-[#C5A059]" />
+          </button>
+        </div>
+      )}
 
       {/* Interactive YouTube Video Modal Player with sound */}
       {isVideoModalOpen && (
