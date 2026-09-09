@@ -225,8 +225,9 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <p>© {new Date().getFullYear()}{data.churchName ? ` ${data.churchName}.` : ''} Todos os direitos reservados.</p>
             <button
+              id="footer-btn-admin-panel"
               onClick={() => setIsAdminOpen(true)}
-              className="text-[11px] text-neutral-400 hover:text-[#C5A059] transition-colors flex items-center gap-1.5 cursor-pointer font-medium ml-2"
+              className="text-[11px] text-[#2b1a1a] border border-[#000000] hover:text-[#C5A059] transition-colors flex items-center gap-1.5 cursor-pointer font-medium ml-2"
             >
               <Shield className="w-3.5 h-3.5 text-[#C5A059]" />
               <span>Painel Admin</span>
