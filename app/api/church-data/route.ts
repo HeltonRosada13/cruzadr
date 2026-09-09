@@ -36,45 +36,36 @@ export async function POST(req: Request) {
     }
 
     const editTimestamp = body.editTimestamp || Date.now();
-    const currentState = loadServerStateFromFile();
-    const merged = {
-      ...initialChurchData,
-      ...currentState,
+    // Save to server filesystem and memory cache
+    const saved = saveServerStateToFile({
       ...body,
-      currentActivity: {
-        ...initialChurchData.currentActivity,
-        ...(currentState?.currentActivity || {}),
-        ...(body?.currentActivity || {}),
-      },
       editTimestamp,
-      lastUpdatedAt: new Date().toISOString(),
-    };
-
-    // 1. Immediately save to server filesystem and memory cache
-    saveServerStateToFile(merged);
+    });
 
     // 2. Sync to cloud Firestore in background
-    const payload = toFirestoreRestDoc(merged);
-    const urls = getFirestoreRestUrls();
+    try {
+      const payload = toFirestoreRestDoc(saved);
+      const urls = getFirestoreRestUrls();
 
-    for (const url of urls) {
-      fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      }).catch((err) => {
-        console.warn('Background Firestore sync notice:', err?.message || err);
-      });
-    }
+      for (const url of urls) {
+        fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+      }
+    } catch {}
 
     return NextResponse.json(
-      { success: true, data: merged },
+      { success: true, data: saved },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       }
     );

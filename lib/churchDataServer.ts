@@ -15,16 +15,30 @@ let inMemoryServerState: ChurchSettings = initialChurchData;
 
 export function loadServerStateFromFile(): ChurchSettings {
   try {
+    let candidateFile: string | null = null;
+    let newestMtime = -1;
+
     if (fs.existsSync(LOCAL_PERSISTED_FILE)) {
-      const raw = fs.readFileSync(LOCAL_PERSISTED_FILE, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        inMemoryServerState = { ...initialChurchData, ...parsed };
-        return inMemoryServerState;
-      }
+      try {
+        const stats = fs.statSync(LOCAL_PERSISTED_FILE);
+        if (stats.mtimeMs > newestMtime) {
+          newestMtime = stats.mtimeMs;
+          candidateFile = LOCAL_PERSISTED_FILE;
+        }
+      } catch {}
     }
     if (fs.existsSync(SERVER_DATA_FILE)) {
-      const raw = fs.readFileSync(SERVER_DATA_FILE, 'utf8');
+      try {
+        const stats = fs.statSync(SERVER_DATA_FILE);
+        if (stats.mtimeMs > newestMtime) {
+          newestMtime = stats.mtimeMs;
+          candidateFile = SERVER_DATA_FILE;
+        }
+      } catch {}
+    }
+
+    if (candidateFile) {
+      const raw = fs.readFileSync(candidateFile, 'utf8');
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         inMemoryServerState = { ...initialChurchData, ...parsed };
@@ -39,22 +53,43 @@ export function loadServerStateFromFile(): ChurchSettings {
 
 export function saveServerStateToFile(data: Partial<ChurchSettings>): ChurchSettings {
   try {
-    inMemoryServerState = { ...initialChurchData, ...inMemoryServerState, ...data };
-    const serialized = JSON.stringify(inMemoryServerState, null, 2);
+    const current = loadServerStateFromFile();
+    const updated: ChurchSettings = {
+      ...initialChurchData,
+      ...current,
+      ...data,
+      currentActivity: {
+        ...initialChurchData.currentActivity,
+        ...(current?.currentActivity || {}),
+        ...(data?.currentActivity || {}),
+      },
+      editTimestamp: data.editTimestamp || Date.now(),
+      lastUpdatedAt: new Date().toISOString(),
+    };
+
+    inMemoryServerState = updated;
+    const serialized = JSON.stringify(updated, null, 2);
+
     try {
       const dir = path.dirname(LOCAL_PERSISTED_FILE);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(LOCAL_PERSISTED_FILE, serialized, 'utf8');
-    } catch {}
+    } catch (e) {
+      console.warn('Could not write LOCAL_PERSISTED_FILE:', e);
+    }
+
     try {
       fs.writeFileSync(SERVER_DATA_FILE, serialized, 'utf8');
-    } catch {}
-    return inMemoryServerState;
+    } catch (e) {
+      console.warn('Could not write SERVER_DATA_FILE:', e);
+    }
+
+    return updated;
   } catch (err) {
     console.warn('Server file write notice:', err);
-    return inMemoryServerState;
+    return inMemoryServerState || initialChurchData;
   }
 }
 

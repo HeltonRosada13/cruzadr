@@ -60,15 +60,25 @@ interface ChurchContextType {
   firebaseConsoleUrl: string;
 }
 
-const LOCAL_STORAGE_KEY = 'catedral_amor_e_fe_data_v3';
-const LAST_EDIT_TS_KEY = 'catedral_last_edit_timestamp_v3';
-const QUOTA_STORAGE_KEY = 'catedral_firestore_quota_exceeded_timestamp_v3';
+const LOCAL_STORAGE_KEY = 'catedral_universal_data_v4';
+const LAST_EDIT_TS_KEY = 'catedral_last_edit_timestamp_v4';
+const QUOTA_STORAGE_KEY = 'catedral_firestore_quota_exceeded_timestamp_v4';
 const SWR_KEY = '/api/church-data';
 const FIRESTORE_DOC_PATH = 'church_data';
 const FIRESTORE_DOC_ID = 'main';
 const FIREBASE_PROJECT_ID = firebaseConfig.projectId || 'cruzadr-c0235';
 const FIRESTORE_DB_ID = firebaseConfig.firestoreDatabaseId || '(default)';
 const FIREBASE_CONSOLE_URL = `https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/firestore/databases/${FIRESTORE_DB_ID}/data?openUpgradeDialog=true`;
+
+// Clean up any stale legacy cache keys from earlier versions
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('catedral_amor_e_fe_data_v1');
+    localStorage.removeItem('catedral_amor_e_fe_data_v2');
+    localStorage.removeItem('catedral_amor_e_fe_data_v3');
+    localStorage.removeItem('catedral_last_edit_timestamp_v3');
+  } catch {}
+}
 
 const API_KEY = firebaseConfig.apiKey || '';
 const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/${FIRESTORE_DB_ID}/documents/${FIRESTORE_DOC_PATH}/${FIRESTORE_DOC_ID}${API_KEY ? `?key=${API_KEY}` : ''}`;
@@ -202,44 +212,26 @@ const broadcastChannel = typeof window !== 'undefined' && 'BroadcastChannel' in 
   ? new BroadcastChannel('catedral_sync_channel_v1')
   : null;
 
-// SWR fetcher with robust fallback, local edit protection and auto cloud-seed
+// SWR fetcher: Server is the single source of truth for all browsers & incognito sessions
 const churchDataFetcher = async (): Promise<ChurchSettings> => {
-  const localState = getInitialLocalCachedState();
-  const currentLocalTs = typeof localState.editTimestamp === 'number'
-    ? localState.editTimestamp
-    : (getStoredLocalEditTimestamp() || 0);
-
   try {
     const res = await fetch(SWR_KEY, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache, no-store',
+      },
       cache: 'no-store',
     });
 
     if (res.ok) {
       const json = await res.json();
       if (json.success && json.data) {
-        const remoteData = json.data;
-        const remoteTs = typeof remoteData.editTimestamp === 'number'
-          ? remoteData.editTimestamp
-          : (remoteData.lastUpdatedAt ? new Date(remoteData.lastUpdatedAt).getTime() : 0);
-
-        // If local user has newer unsynced edits, preserve them and push to server
-        if (currentLocalTs > 0 && currentLocalTs > remoteTs) {
-          // Asynchronously propagate local edits to server
-          persistToFirestore(localState, true).catch(() => {});
-          return localState;
-        }
-
-        // Remote data is newer or equally fresh
-        const sanitized = sanitizeSavedData(remoteData);
+        const sanitized = sanitizeSavedData(json.data);
         memoryState = sanitized;
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitized));
-            if (remoteTs > 0) {
-              setStoredLocalEditTimestamp(remoteTs);
-            }
           } catch {}
         }
         return sanitized;
@@ -249,7 +241,7 @@ const churchDataFetcher = async (): Promise<ChurchSettings> => {
     console.warn('SWR fetcher notice:', err);
   }
 
-  return localState;
+  return memoryState || getInitialLocalCachedState();
 };
 
 let memoryState: ChurchSettings = initialChurchData;
@@ -405,17 +397,17 @@ export function ChurchProvider({
     () => false
   );
 
-  // SWR: Initialized with SSR server data, zero-flash, onSnapshot handles live updates
+  // SWR: Initialized with SSR server data, zero-flash, live auto-sync across all browsers & incognito
   const { data: swrData, mutate } = useSWR<ChurchSettings>(
     SWR_KEY,
     churchDataFetcher,
     {
       fallbackData: initialData || memoryState || initialChurchData,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      revalidateOnMount: false,
-      dedupingInterval: 4000,
-      refreshInterval: 0,
+      revalidateOnMount: true,
+      dedupingInterval: 1000,
+      refreshInterval: 2500,
     }
   );
 
@@ -426,18 +418,6 @@ export function ChurchProvider({
       memoryState = initialData;
     }
   }, [initialData]);
-
-  useEffect(() => {
-    // On client mount, only adopt localStorage if it is strictly newer than server state
-    const local = getInitialLocalCachedState();
-    const localTs = typeof local.editTimestamp === 'number' ? local.editTimestamp : 0;
-    const currentTs = typeof activeData.editTimestamp === 'number' ? activeData.editTimestamp : 0;
-
-    if (local && localTs > currentTs && JSON.stringify(local) !== JSON.stringify(initialChurchData)) {
-      memoryState = local;
-      mutate(local, false);
-    }
-  }, [activeData.editTimestamp, mutate]);
 
   useEffect(() => {
     if (swrData) {
@@ -529,7 +509,7 @@ export function ChurchProvider({
     setStoredLocalEditTimestamp(now);
     
     // 1. Optimistic SWR & memory update with current timestamp attached
-    const baseObj = memoryState || getInitialLocalCachedState();
+    const baseObj = memoryState || initialChurchData;
     const updatedRaw = updater(baseObj);
     const updated: ChurchSettings = {
       ...updatedRaw,

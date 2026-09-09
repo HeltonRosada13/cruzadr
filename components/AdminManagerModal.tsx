@@ -65,9 +65,9 @@ import {
 } from 'lucide-react';
 
 export function AdminManagerModal() {
-  const { isAdminOpen, data } = useChurch();
+  const { isAdminOpen } = useChurch();
   if (!isAdminOpen) return null;
-  return <AdminManagerModalInner key={`${data.currentActivity?.id || 'admin-modal'}-${data.editTimestamp || 0}`} />;
+  return <AdminManagerModalInner key="admin-modal-main" />;
 }
 
 function AdminManagerModalInner() {
